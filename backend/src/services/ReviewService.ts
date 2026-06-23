@@ -5,13 +5,15 @@ import { CodeReview } from '../types';
 export class ReviewService {
   constructor(private db: any) {}
 
-  async createReview(repoId: string, title: string, description: string, authorId: string, branchName: string, baseBranch = 'main'): Promise<CodeReview> {
+  async createReview(repoId: string, title: string, description: string, authorId: string, branchName: string, baseBranch = 'main', codeFiles?: { name: string; content: string }[]): Promise<CodeReview> {
+    const filesChanged = codeFiles ? codeFiles.length : 0;
+    const additions = codeFiles ? codeFiles.reduce((sum, f) => sum + f.content.split('\n').length, 0) : 0;
     const review = {
       id: uuidv4(), repo_id: repoId, title, description, author_id: authorId,
-      branch_name: branchName, base_branch: baseBranch, status: 'draft',
-      files_changed: 0, additions: 0, deletions: 0, ai_score: null,
+      branch_name: branchName, base_branch: baseBranch, status: 'open',
+      files_changed: filesChanged, additions, deletions: 0, ai_score: null,
       complexity_score: null, priority: 'medium', created_at: new Date(),
-      updated_at: new Date(), metadata: {}
+      updated_at: new Date(), metadata: {}, code_files: codeFiles || []
     } as any;
     if (this.db.reviews) this.db.reviews.push(review);
     return review;

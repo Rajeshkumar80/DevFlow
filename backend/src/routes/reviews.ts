@@ -9,14 +9,15 @@ export function createReviewRouter(db: Pool) {
 
   router.post('/:repoId', authMiddleware(db), async (req: Request, res: Response) => {
     try {
-      const { title, description, branchName, baseBranch } = req.body;
+      const { title, description, branchName, baseBranch, codeFiles } = req.body;
       const review = await reviewService.createReview(
         req.params.repoId,
         title,
         description,
         req.userId!,
         branchName,
-        baseBranch || 'main'
+        baseBranch || 'main',
+        codeFiles
       );
       res.status(201).json(review);
     } catch (err: any) {

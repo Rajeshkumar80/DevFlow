@@ -34,8 +34,9 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/" element={<ProtectedRoute><AppLayout><DashboardPage /></AppLayout></ProtectedRoute>} />
-      <Route path="/reviews/:repoId/:reviewId" element={<ProtectedRoute><AppLayout><ReviewDetailPage /></AppLayout></ProtectedRoute>} />
-      <Route path="/sessions/:sessionId" element={<ProtectedRoute><AppLayout><PairSessionPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/reviews/:reviewId" element={<ProtectedRoute><AppLayout><ReviewDetailPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/pair" element={<ProtectedRoute><AppLayout><PairSessionPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/pair/:sessionId" element={<ProtectedRoute><AppLayout><PairSessionPage /></AppLayout></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><AppLayout><AnalyticsPage /></AppLayout></ProtectedRoute>} />
       <Route path="/learning" element={<ProtectedRoute><AppLayout><LearningPage /></AppLayout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />

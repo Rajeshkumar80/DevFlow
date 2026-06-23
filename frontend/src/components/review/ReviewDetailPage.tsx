@@ -5,7 +5,7 @@ import { reviewApi } from '../../services/reviewApi';
 import { analysisApi } from '../../services/analysisApi';
 import { StatusBadge } from '../common/StatusBadge';
 import { LoadingSpinner } from '../common/LoadingSpinner';
-import { MessageSquare, CheckCircle, XCircle, AlertTriangle, Send, GitBranch, ArrowLeft } from 'lucide-react';
+import { MessageSquare, CheckCircle, XCircle, AlertTriangle, Send, GitBranch, ArrowLeft, FileCode, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const ReviewDetailPage = () => {
@@ -17,6 +17,8 @@ export const ReviewDetailPage = () => {
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
+  const [activeFile, setActiveFile] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => { if (reviewId) loadReview(); }, [reviewId]);
 
@@ -41,9 +43,16 @@ export const ReviewDetailPage = () => {
     try { const updated = await reviewApi.updateReviewStatus('repo-1', reviewId!, status); setReview(updated); } catch {}
   };
 
+  const copyCode = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (loading) return <LoadingSpinner />;
   if (!review) return <div className="text-center py-12"><p className="text-gray-500">Review not found</p></div>;
 
+  const codeFiles = review.code_files || [];
   const severityConfig: Record<string, { color: string; label: string }> = {
     critical: { color: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20', label: 'Critical' },
     high: { color: 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20', label: 'High' },
@@ -82,6 +91,29 @@ export const ReviewDetailPage = () => {
           {review.ai_score ? <span>AI Score: <span className="text-primary-600 dark:text-primary-400 font-medium">{review.ai_score}/5</span></span> : null}
         </div>
       </motion.div>
+
+      {/* Code Files */}
+      {codeFiles.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border overflow-hidden shadow-card">
+          <div className="flex border-b border-gray-200 dark:border-dark-border overflow-x-auto">
+            {codeFiles.map((file: any, i: number) => (
+              <button key={i} onClick={() => setActiveFile(i)} className={`flex items-center gap-1.5 px-3 py-2.5 text-xs border-b-2 whitespace-nowrap transition-colors ${activeFile === i ? 'border-primary-500 text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-dark-surface' : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-surface/50'}`}>
+                <FileCode size={13} /> {file.name}
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <div className="absolute top-2 right-2 z-10">
+              <button onClick={() => copyCode(codeFiles[activeFile]?.content || '')} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-gray-100 dark:bg-dark-surface hover:bg-gray-200 dark:hover:bg-dark-hover rounded text-gray-600 dark:text-gray-400 transition-colors">
+                {copied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+              </button>
+            </div>
+            <pre className="p-4 bg-gray-50 dark:bg-dark-bg text-xs font-mono text-gray-900 dark:text-gray-100 overflow-x-auto max-h-[500px] overflow-y-auto leading-relaxed">
+              {codeFiles[activeFile]?.content || 'No content'}
+            </pre>
+          </div>
+        </motion.div>
+      )}
 
       {issues.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-4 shadow-card">

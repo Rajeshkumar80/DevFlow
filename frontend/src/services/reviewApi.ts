@@ -7,6 +7,7 @@ export const reviewApi = {
     description: string;
     branchName: string;
     baseBranch?: string;
+    codeFiles?: { name: string; content: string }[];
   }): Promise<CodeReview> => {
     const response = await api.post(`/reviews/${repoId}`, data);
     return response.data;

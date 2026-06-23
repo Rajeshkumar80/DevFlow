@@ -68,6 +68,7 @@ export interface CodeReview {
   created_at: Date;
   updated_at: Date;
   merged_at?: Date;
+  code_files?: { name: string; content: string }[];
 }
 
 export interface ReviewComment {
@@ -102,13 +103,18 @@ export interface CodeIssue {
 
 export interface PairSession {
   id: string;
+  name?: string;
   review_id?: string;
-  initiator_id: string;
+  creator_id: string;
+  initiator_id?: string;
   status: 'scheduled' | 'active' | 'paused' | 'ended';
+  code?: string;
+  participants: string[];
   started_at?: Date;
   ended_at?: Date;
   duration_minutes?: number;
-  participants: string[];
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface TeamAnalytics {
