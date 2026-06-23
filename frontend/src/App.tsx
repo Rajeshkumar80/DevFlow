@@ -11,6 +11,7 @@ import { PairSessionPage } from './components/pair/PairSessionPage';
 import { AnalyticsPage } from './components/analytics/AnalyticsPage';
 import { LearningPage } from './components/learning/LearningPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { HelpSupportPage } from './components/help/HelpSupportPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -42,6 +43,7 @@ function App() {
       <Route path="/analytics" element={<ProtectedRoute><AppLayout><AnalyticsPage /></AppLayout></ProtectedRoute>} />
       <Route path="/learning" element={<ProtectedRoute><AppLayout><LearningPage /></AppLayout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/help" element={<ProtectedRoute><AppLayout><HelpSupportPage /></AppLayout></ProtectedRoute>} />
     </Routes>
   );
 }

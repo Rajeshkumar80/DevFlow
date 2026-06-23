@@ -132,7 +132,7 @@ export interface TeamAnalytics {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'review_assigned' | 'comment_reply' | 'status_change' | 'learning_recommended' | 'achievement_unlocked';
+  type: 'review_assigned' | 'comment_reply' | 'status_change' | 'learning_recommended' | 'achievement_unlocked' | 'team_message' | 'mention';
   title: string;
   content?: string;
   review_id?: string;
