@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Code2, Shield, Zap, Users, BarChart3, CheckCircle, Star } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Code2, Shield, Zap, Users, BarChart3, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { authApi } from '../../services/authApi';
 
@@ -91,12 +91,6 @@ export const LoginPage = () => {
 
         <div className="relative w-full max-w-[540px] px-10 xl:px-14">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
-            {/* Badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6">
-              <Star size={12} className="text-primary-400" />
-              <span className="text-[11px] font-medium text-primary-400">Trusted by 2,000+ teams</span>
-            </div>
-
             {/* Title */}
             <h2 className="text-3xl xl:text-[34px] font-bold text-white leading-tight mb-3">
               Ship better code,<br />faster together
