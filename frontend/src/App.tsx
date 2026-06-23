@@ -5,6 +5,7 @@ import { Header } from './components/common/Header';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { DashboardPage } from './components/dashboard/DashboardPage';
+import { ReviewsListPage } from './components/review/ReviewsListPage';
 import { ReviewDetailPage } from './components/review/ReviewDetailPage';
 import { PairSessionPage } from './components/pair/PairSessionPage';
 import { AnalyticsPage } from './components/analytics/AnalyticsPage';
@@ -34,6 +35,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/" element={<ProtectedRoute><AppLayout><DashboardPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/reviews" element={<ProtectedRoute><AppLayout><ReviewsListPage /></AppLayout></ProtectedRoute>} />
       <Route path="/reviews/:reviewId" element={<ProtectedRoute><AppLayout><ReviewDetailPage /></AppLayout></ProtectedRoute>} />
       <Route path="/pair" element={<ProtectedRoute><AppLayout><PairSessionPage /></AppLayout></ProtectedRoute>} />
       <Route path="/pair/:sessionId" element={<ProtectedRoute><AppLayout><PairSessionPage /></AppLayout></ProtectedRoute>} />

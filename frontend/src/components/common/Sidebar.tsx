@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Settings, LogOut, Code2, FileCode, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Settings, LogOut, Code2, FileCode, GraduationCap, Users } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const sections = [
@@ -8,7 +8,8 @@ const sections = [
     items: [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/', badge: '3' },
       { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-      { icon: FileCode, label: 'Reviews', path: '/reviews/test-repo/test-review', badge: '5' },
+      { icon: FileCode, label: 'Reviews', path: '/reviews', badge: '5' },
+      { icon: Users, label: 'Pair Programming', path: '/pair' },
       { icon: GraduationCap, label: 'Learning', path: '/learning' },
     ],
   },
