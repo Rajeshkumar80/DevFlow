@@ -28,7 +28,7 @@ export const LoginPage = () => {
   return (
     <div className="min-h-screen flex bg-white dark:bg-dark-bg">
       {/* Left — Login Form */}
-      <div className="w-full lg:w-[460px] flex flex-col justify-center px-8 sm:px-12 lg:px-14 xl:px-16 bg-gray-50/50 dark:bg-dark-bg">
+      <div className="w-full md:w-[420px] lg:w-[460px] flex flex-col justify-center px-8 sm:px-12 bg-gray-50/80 dark:bg-dark-bg border-r border-gray-200/60 dark:border-dark-border flex-shrink-0">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-[340px] mx-auto">
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-10">
@@ -85,57 +85,60 @@ export const LoginPage = () => {
       </div>
 
       {/* Right — About Section */}
-      <div className="hidden lg:flex flex-1 items-center bg-dark-card dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border overflow-hidden">
-        <div className="w-full max-w-[520px] px-12 xl:px-16">
+      <div className="hidden md:flex flex-1 items-center justify-center bg-dark-card dark:bg-dark-surface overflow-hidden relative">
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+        <div className="relative w-full max-w-[540px] px-10 xl:px-14">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
             {/* Badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-500/20 mb-6">
-              <Star size={12} className="text-primary-600 dark:text-primary-400" />
-              <span className="text-[11px] font-medium text-primary-700 dark:text-primary-400">Trusted by 2,000+ teams</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6">
+              <Star size={12} className="text-primary-400" />
+              <span className="text-[11px] font-medium text-primary-400">Trusted by 2,000+ teams</span>
             </div>
 
             {/* Title */}
-            <h2 className="text-[28px] font-bold text-gray-900 dark:text-white leading-tight mb-3">
+            <h2 className="text-3xl xl:text-[34px] font-bold text-white leading-tight mb-3">
               Ship better code,<br />faster together
             </h2>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed mb-8 max-w-[400px]">
+            <p className="text-[13px] text-gray-400 leading-relaxed mb-8 max-w-[420px]">
               AI-powered code reviews, real-time pair programming, and team analytics — all in one place.
             </p>
 
             {/* Features Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-2 gap-3.5 mb-8">
               {[
-                { icon: Shield, title: 'AI Analysis', desc: 'Auto-detect bugs & security issues', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-                { icon: Users, title: 'Pair Coding', desc: 'Real-time collaborative editor', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
-                { icon: BarChart3, title: 'Analytics', desc: 'Track team performance metrics', color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-500/10' },
-                { icon: Zap, title: 'Workflows', desc: 'Automated review assignments', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+                { icon: Shield, title: 'AI Analysis', desc: 'Auto-detect bugs & security issues', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                { icon: Users, title: 'Pair Coding', desc: 'Real-time collaborative editor', color: 'text-violet-400', bg: 'bg-violet-500/10' },
+                { icon: BarChart3, title: 'Analytics', desc: 'Track team performance metrics', color: 'text-primary-400', bg: 'bg-primary-500/10' },
+                { icon: Zap, title: 'Workflows', desc: 'Automated review assignments', color: 'text-amber-400', bg: 'bg-amber-500/10' },
               ].map((feature, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.08 }} className="p-3.5 rounded-xl border border-gray-200/60 dark:border-dark-border bg-white/50 dark:bg-dark-card/50 hover:shadow-sm transition-all">
+                <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.08 }} className="p-3.5 rounded-xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06] transition-all">
                   <div className={`w-8 h-8 rounded-lg ${feature.bg} ${feature.color} flex items-center justify-center mb-2.5`}>
                     <feature.icon size={16} />
                   </div>
-                  <h4 className="text-[13px] font-semibold text-gray-900 dark:text-white mb-0.5">{feature.title}</h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{feature.desc}</p>
+                  <h4 className="text-[13px] font-semibold text-white mb-0.5">{feature.title}</h4>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">{feature.desc}</p>
                 </motion.div>
               ))}
             </div>
 
             {/* Social Proof */}
-            <div className="flex items-center gap-5 text-[11px] text-gray-400 dark:text-gray-500">
+            <div className="flex items-center gap-5 text-[11px] text-gray-500 mb-8">
               <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-emerald-500" /> Free for small teams</span>
               <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-emerald-500" /> No credit card</span>
             </div>
 
             {/* Stats */}
-            <div className="flex gap-8 mt-8 pt-6 border-t border-gray-200/60 dark:border-dark-border">
+            <div className="flex gap-8 pt-6 border-t border-white/[0.06]">
               {[
                 { value: '12k+', label: 'Reviews' },
                 { value: '2k+', label: 'Teams' },
                 { value: '4.9', label: 'Rating' },
               ].map((stat, i) => (
                 <div key={i}>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{stat.label}</p>
+                  <p className="text-lg font-bold text-white">{stat.value}</p>
+                  <p className="text-[11px] text-gray-500">{stat.label}</p>
                 </div>
               ))}
             </div>
