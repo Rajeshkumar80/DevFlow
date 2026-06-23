@@ -28,6 +28,7 @@ const TeamTab = () => {
   const [inviteRole, setInviteRole] = useState<'admin' | 'reviewer' | 'viewer'>('reviewer');
   const [inviteCode, setInviteCode] = useState('');
   const [codeError, setCodeError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [members, setMembers] = useState<TeamMember[]>([
@@ -37,11 +38,26 @@ const TeamTab = () => {
     { id: '4', name: 'Emily Park', email: 'emily@devflow.ai', role: 'viewer', status: 'pending', joinedAt: new Date('2026-01-05') },
   ]);
 
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleInvite = () => {
-    if (!inviteEmail) return;
-    const newMember: TeamMember = { id: String(members.length + 1), name: inviteEmail.split('@')[0], email: inviteEmail, role: inviteRole, status: 'pending', joinedAt: new Date() };
+    if (!inviteEmail.trim()) {
+      setEmailError('Email is required');
+      return;
+    }
+    if (!isValidEmail(inviteEmail)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    if (members.some((m) => m.email.toLowerCase() === inviteEmail.toLowerCase())) {
+      setEmailError('This email is already a team member');
+      return;
+    }
+    setEmailError('');
+    const newMember: TeamMember = { id: String(Date.now()), name: inviteEmail.split('@')[0], email: inviteEmail, role: inviteRole, status: 'pending', joinedAt: new Date() };
     setMembers([...members, newMember]);
     setInviteEmail('');
+    setInviteRole('reviewer');
     setInviteOpen(false);
   };
 
@@ -66,11 +82,19 @@ const TeamTab = () => {
       setCodeError('Invalid invite code');
       return;
     }
+    if (members.some((m) => m.email.toLowerCase() === 'new@devflow.ai')) {
+      setCodeError('You have already joined the team');
+      return;
+    }
     setCodeError('');
-    const newMember: TeamMember = { id: String(members.length + 1), name: 'New Member', email: 'new@devflow.ai', role: 'viewer', status: 'active', joinedAt: new Date() };
+    const newMember: TeamMember = { id: String(Date.now()), name: 'New Member', email: 'new@devflow.ai', role: 'viewer', status: 'active', joinedAt: new Date() };
     setMembers([...members, newMember]);
     setInviteCode('');
     alert('Successfully joined the team!');
+  };
+
+  const handleRemoveMember = (id: string) => {
+    setMembers(members.filter((m) => m.id !== id));
   };
 
   const roleColors = { admin: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400', reviewer: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400', viewer: 'bg-gray-100 dark:bg-dark-border text-gray-600 dark:text-gray-400' };
@@ -96,16 +120,17 @@ const TeamTab = () => {
             <div className="p-4 rounded-btn bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">Invite Team Member</p>
-                <button onClick={() => setInviteOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X size={16} /></button>
+                <button onClick={() => { setInviteOpen(false); setEmailError(''); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X size={16} /></button>
               </div>
-              <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="input" placeholder="email@example.com" type="email" />
+              <input value={inviteEmail} onChange={(e) => { setInviteEmail(e.target.value); setEmailError(''); }} className={`input ${emailError ? 'border-red-500 dark:border-red-500' : ''}`} placeholder="email@example.com" type="email" />
+              {emailError && <p className="text-xs text-red-500 dark:text-red-400">{emailError}</p>}
               <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'admin' | 'reviewer' | 'viewer')} className="input">
                 <option value="admin">Admin</option>
                 <option value="reviewer">Reviewer</option>
                 <option value="viewer">Viewer</option>
               </select>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setInviteOpen(false)} className="px-3 py-1.5 rounded-btn border border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-hover text-xs">Cancel</button>
+                <button onClick={() => { setInviteOpen(false); setEmailError(''); }} className="px-3 py-1.5 rounded-btn border border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-hover text-xs">Cancel</button>
                 <button onClick={handleInvite} className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-btn text-xs font-medium">Send Invite</button>
               </div>
             </div>
@@ -144,7 +169,7 @@ const TeamTab = () => {
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${roleColors[member.role]}`}>{member.role}</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[member.status]}`}>{member.status}</span>
               {member.role === 'admin' && <Crown size={14} className="text-amber-500" />}
-              {member.status !== 'pending' && <button className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>}
+              {member.role !== 'admin' && <button onClick={() => handleRemoveMember(member.id)} className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>}
             </div>
           </div>
         ))}
