@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { ReviewService } from '../services/ReviewService';
-import { Pool } from 'pg';
 import { authMiddleware } from '../middleware/auth';
 
-export function createReviewRouter(db: Pool) {
+export function createReviewRouter(db: any) {
   const router = Router();
-  const reviewService = new ReviewService(db);
+  const reviewService = new ReviewService();
 
   router.post('/:repoId', authMiddleware(db), async (req: Request, res: Response) => {
     try {

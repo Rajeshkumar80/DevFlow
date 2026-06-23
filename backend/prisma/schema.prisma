@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id
+  email        String   @unique
+  username     String   @unique
+  password_hash String
+  full_name    String?
+  avatar_url   String?
+  bio          String?
+  role         String   @default("contributor")
+  is_active    Boolean  @default(true)
+  last_login   DateTime?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
+
+  reviews          Review[]
+  comments         Comment[]
+  notifications    Notification[]
+  sessions         Session[]
+  analyticsEvents  AnalyticsEvent[]
+}
+
+model Repository {
+  id        String   @id
+  name      String
+  owner_id  String
+  org_id    String?
+  github_url String?
+  primary_language String?
+  description String?
+  created_at DateTime @default(now())
+
+  reviews Review[]
+}
+
+model Review {
+  id              String   @id
+  repo_id         String
+  title           String
+  description     String?
+  author_id       String
+  status          String   @default("draft")
+  branch_name     String
+  base_branch     String   @default("main")
+  files_changed   Int      @default(0)
+  additions       Int      @default(0)
+  deletions       Int      @default(0)
+  ai_score        Float?
+  complexity_score Float?
+  priority        String   @default("medium")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now())
+  merged_at       DateTime?
+
+  repository Repository @relation(fields: [repo_id], references: [id])
+  author     User       @relation(fields: [author_id], references: [id])
+  issues     Issue[]
+  comments   Comment[]
+  codeFiles  CodeFile[]
+}
+
+model CodeFile {
+  id        String @id
+  review_id String
+  name      String
+  content   String
+
+  review Review @relation(fields: [review_id], references: [id], onDelete: Cascade)
+}
+
+model Issue {
+  id          String   @id
+  review_id   String
+  issue_type  String
+  severity    String
+  file_path   String?
+  line_number Int?
+  description String
+  suggestion  String?
+  ai_generated Boolean @default(false)
+  status      String   @default("open")
+  created_at  DateTime @default(now())
+
+  review Review @relation(fields: [review_id], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id              String   @id
+  review_id       String
+  author_id       String
+  file_path       String?
+  line_number     Int?
+  content         String
+  is_suggestion   Boolean  @default(false)
+  suggestion_text String?
+  thread_id       String?
+  resolved        Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now())
+
+  review Review @relation(fields: [review_id], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [author_id], references: [id])
+}
+
+model Notification {
+  id         String   @id
+  user_id    String
+  type       String
+  title      String
+  content    String?
+  review_id  String?
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model Session {
+  id           String   @id
+  name         String?
+  creator_id   String
+  status       String   @default("active")
+  code         String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
+
+  creator      User              @relation(fields: [creator_id], references: [id])
+  participants SessionParticipant[]
+}
+
+model SessionParticipant {
+  id        String @id
+  session_id String
+  user_id   String
+
+  session Session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsEvent {
+  id        String   @id
+  user_id   String?
+  team_id   String?
+  date      DateTime @default(now())
+  event_type String
+  metadata  String?
+
+  user User? @relation(fields: [user_id], references: [id])
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

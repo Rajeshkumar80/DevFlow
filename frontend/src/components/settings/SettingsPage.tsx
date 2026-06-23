@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Bell, Shield, Palette, Key, Save, Check, Moon, Sun, Monitor, Users, Mail, X, Copy, Trash2, Crown, ExternalLink, Zap } from 'lucide-react';
+import { User, Bell, Shield, Palette, Key, Save, Check, Moon, Sun, Monitor, Users, Mail, X, Copy, Trash2, Crown, ExternalLink, Zap, Loader2, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import api from '../../services/api';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -21,6 +22,141 @@ interface TeamMember {
   status: 'active' | 'pending' | 'inactive';
   joinedAt: Date;
 }
+
+const ApiKeysTab = () => {
+  const [apiKey, setApiKey] = useState('');
+  const [maskedKey, setMaskedKey] = useState('');
+  const [hasKey, setHasKey] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-001');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await api.get('/settings');
+        setMaskedKey(res.data.apiKey || '');
+        setHasKey(res.data.hasApiKey);
+        setSelectedModel(res.data.model || 'google/gemini-2.0-flash-001');
+      } catch {}
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true); setError('');
+    try {
+      const body: any = {};
+      if (apiKey) body.apiKey = apiKey;
+      if (selectedModel) body.model = selectedModel;
+      await api.post('/settings', body);
+      setHasKey(true);
+      if (apiKey) setMaskedKey('••••••••' + apiKey.slice(-6));
+      setApiKey('');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to save');
+    } finally { setSaving(false); }
+  };
+
+  const models = [
+    { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash', provider: 'Google', tag: 'New' },
+    { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', tag: 'Fast' },
+    { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku', provider: 'Anthropic', tag: 'Smart' },
+    { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', provider: 'Meta', tag: 'Open' },
+  ];
+
+  if (loading) return <div className="flex items-center gap-2 text-gray-400"><Loader2 size={16} className="animate-spin" /> Loading...</div>;
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white">AI Configuration</h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Connect OpenRouter to enable real AI-powered code reviews.</p>
+      </div>
+
+      {hasKey && (
+        <div className="flex items-center gap-2 p-3 rounded-btn bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">AI Connected</span>
+          <span className="text-xs text-emerald-600/70 dark:text-emerald-400/70">— {maskedKey}</span>
+        </div>
+      )}
+
+      <div className="p-4 rounded-btn bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 border border-blue-200 dark:border-blue-500/20 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center"><Zap size={16} className="text-white" /></div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">AI-Powered Reviews</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Access 100+ AI models with a single API key</p>
+          </div>
+        </div>
+        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+          Get API Key from OpenRouter <ExternalLink size={12} />
+        </a>
+      </div>
+
+      <div className="space-y-3">
+        <label className="label">OpenRouter API Key</label>
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            className="input flex-1 font-mono text-xs"
+            placeholder={hasKey ? 'Enter new key to update...' : 'sk-or-v1-...'}
+          />
+        </div>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1"><Shield size={11} /> Stored securely on the server. Never exposed to the browser.</p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Select AI Model:</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {models.map((model) => (
+            <button
+              key={model.id}
+              onClick={() => setSelectedModel(model.id)}
+              className={`flex items-center justify-between p-2.5 rounded-btn border transition-all ${selectedModel === model.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 dark:border-primary-500' : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface hover:bg-gray-100 dark:hover:bg-dark-hover'}`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${selectedModel === model.id ? 'bg-primary-500' : 'bg-emerald-500'}`} />
+                <div>
+                  <p className="text-xs font-medium text-gray-900 dark:text-white">{model.name}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">{model.provider}</p>
+                </div>
+              </div>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">{model.tag}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 p-3 rounded-btn bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
+          <AlertCircle size={14} className="text-red-500" />
+          <span className="text-xs text-red-600 dark:text-red-400">{error}</span>
+        </div>
+      )}
+
+      <div className="pt-4 border-t border-gray-100 dark:border-dark-border flex items-center gap-3">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-btn transition-all active:scale-[0.98] flex items-center gap-2 text-sm disabled:opacity-50">
+          {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+          {saving ? 'Saving...' : 'Save AI Settings'}
+        </button>
+        {saved && (
+          <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-sm">
+            <Check size={15} /> Saved!
+          </motion.span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const TeamTab = () => {
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -184,7 +320,10 @@ export const SettingsPage = () => {
   const user = useAuthStore((s) => s.user);
   const { theme, setTheme } = useThemeStore();
 
-  const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const handleSave = async () => {
+    if (activeTab === 'api') return;
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+  };
 
   return (
     <div className="space-y-6">
@@ -265,89 +404,18 @@ export const SettingsPage = () => {
             </div>
           )}
 
-          {activeTab === 'api' && (
-            <div className="space-y-5">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-white">AI Configuration</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Connect an AI provider to enable intelligent code reviews, learning recommendations, and pair programming assistance.</p>
-              </div>
-
-              <div className="p-4 rounded-btn bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 border border-blue-200 dark:border-blue-500/20 space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center"><Zap size={16} className="text-white" /></div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">AI-Powered Reviews</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Access 100+ AI models with a single API key</p>
-                  </div>
-                </div>
-                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
-                  Get API Key from OpenRouter <ExternalLink size={12} />
-                </a>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">How to get your free API key:</p>
-                <ol className="space-y-2.5">
-                  {[
-                    { step: 1, title: 'Create an account', desc: 'Go to openrouter.ai and sign up with Google or GitHub', icon: '1' },
-                    { step: 2, title: 'Navigate to Keys', desc: 'Click "Keys" in the left sidebar or visit openrouter.ai/keys', icon: '2' },
-                    { step: 3, title: 'Create a new key', desc: 'Click "Create Key", name it "DevFlow", and copy the key', icon: '3' },
-                    { step: 4, title: 'Add credits (optional)', desc: 'Free tier includes limited credits. Add $5+ for extended usage', icon: '4' },
-                  ].map((item) => (
-                    <li key={item.step} className="flex gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-500/10 flex items-center justify-center">
-                        <span className="text-[11px] font-bold text-primary-600 dark:text-primary-400">{item.icon}</span>
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-medium text-gray-900 dark:text-white">{item.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              <div className="border-t border-gray-100 dark:border-dark-border pt-4 space-y-3">
-                <label className="label">OpenRouter API Key</label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input type="password" defaultValue="sk-or-v1-••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••" className="input pr-10 font-mono text-xs" placeholder="sk-or-v1-..." />
-                  </div>
-                </div>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1"><Shield size={11} /> Stored locally in your browser. Never sent to our servers.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Available AI Models:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {[
-                    { name: 'GPT-4o Mini', provider: 'OpenAI', free: true, badge: 'Fast' },
-                    { name: 'Claude 3.5 Haiku', provider: 'Anthropic', free: true, badge: 'Smart' },
-                    { name: 'Gemini 2.0 Flash', provider: 'Google', free: true, badge: 'New' },
-                    { name: 'Llama 3.1 8B', provider: 'Meta', free: true, badge: 'Open' },
-                  ].map((model) => (
-                    <div key={model.name} className="flex items-center justify-between p-2.5 rounded-btn bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white">{model.name}</p>
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400">{model.provider}</p>
-                        </div>
-                      </div>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">{model.badge}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === 'api' && <ApiKeysTab />}
 
           <div className="mt-6 pt-5 border-t border-gray-100 dark:border-dark-border flex items-center gap-3">
-            <button onClick={handleSave} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-btn transition-all active:scale-[0.98] flex items-center gap-2 text-sm"><Save size={15} /> Save Changes</button>
-            {saved && (
-              <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-sm">
-                <Check size={15} /> Saved!
-              </motion.span>
+            {activeTab !== 'api' && (
+              <>
+                <button onClick={handleSave} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-btn transition-all active:scale-[0.98] flex items-center gap-2 text-sm"><Save size={15} /> Save Changes</button>
+                {saved && (
+                  <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-sm">
+                    <Check size={15} /> Saved!
+                  </motion.span>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -3,13 +3,207 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, AlertTriangle, Bug, Shield, Zap, Clock, FileCode, ChevronDown, ChevronRight, Activity, Layers, Target, GitCommit, RefreshCw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { analysisApi } from '../../services/analysisApi';
 
-const MiniHeatmap = ({ data }: { data: number[] }) => {
-  const max = Math.max(...data);
+const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const GitHubHeatmap = () => {
+  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const today = new Date();
+  const endDate = new Date(today);
+  endDate.setDate(endDate.getDate() + (6 - today.getDay()));
+
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - 364);
+
+  const grid: { date: Date; count: number; row: number; col: number }[][] = [];
+  let totalContributions = 0;
+  let current = new Date(startDate);
+
+  const seededRandom = (seed: number) => {
+    let x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  };
+
+  for (let week = 0; week < 53; week++) {
+    const weekCol: { date: Date; count: number; row: number; col: number }[] = [];
+    for (let day = 0; day < 7; day++) {
+      if (current > endDate) {
+        weekCol.push({ date: new Date(current), count: -1, row: day, col: week });
+      } else {
+        const dayOfYear = Math.floor((current.getTime() - startDate.getTime()) / 86400000);
+        const dayOfWeek = current.getDay();
+        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+        const month = current.getMonth();
+
+        const holidayBoost = (month === 11 && current.getDate() >= 20) || (month === 0 && current.getDate() <= 5) ? 0.3 : 0;
+        const summerDip = (month >= 5 && month <= 7) ? -0.2 : 0;
+        const mondayBoost = dayOfWeek === 1 ? 0.2 : 0;
+        const fridayDip = dayOfWeek === 5 ? -0.15 : 0;
+
+        const baseChance = isWeekday ? 0.75 : 0.25;
+        const probability = Math.min(0.95, Math.max(0.05, baseChance + holidayBoost + summerDip + mondayBoost + fridayDip));
+
+        const hasActivity = seededRandom(dayOfYear * 137 + week * 31) < probability;
+
+        let count = 0;
+        if (hasActivity) {
+          const intensity = seededRandom(dayOfYear * 53 + week * 97);
+          if (isWeekday) {
+            count = intensity < 0.3 ? Math.floor(seededRandom(dayOfYear * 11) * 3) + 1
+              : intensity < 0.6 ? Math.floor(seededRandom(dayOfYear * 23) * 5) + 3
+              : intensity < 0.85 ? Math.floor(seededRandom(dayOfYear * 37) * 5) + 6
+              : Math.floor(seededRandom(dayOfYear * 43) * 5) + 10;
+          } else {
+            count = intensity < 0.6 ? Math.floor(seededRandom(dayOfYear * 19) * 2) + 1
+              : intensity < 0.9 ? Math.floor(seededRandom(dayOfYear * 29) * 3) + 2
+              : Math.floor(seededRandom(dayOfYear * 47) * 3) + 4;
+          }
+        }
+
+        totalContributions += count;
+        weekCol.push({ date: new Date(current), count, row: day, col: week });
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    grid.push(weekCol);
+  }
+
+  const validCounts = grid.flat().filter(d => d.count >= 0).map(d => d.count);
+
+  const getCellColor = (count: number) => {
+    if (count < 0) return 'bg-transparent';
+    if (count === 0) return 'bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05]';
+    if (count <= 2) return 'bg-emerald-900/30 dark:bg-emerald-500/15';
+    if (count <= 5) return 'bg-emerald-700/50 dark:bg-emerald-500/30';
+    if (count <= 8) return 'bg-emerald-600/70 dark:bg-emerald-500/50';
+    if (count <= 12) return 'bg-emerald-500/80 dark:bg-emerald-400/60';
+    return 'bg-emerald-500 dark:bg-emerald-400';
+  };
+
+  const monthLabels: { label: string; col: number }[] = [];
+  let lastMonth = -1;
+  grid.forEach((week, weekIdx) => {
+    const firstDay = week[0].date;
+    const month = firstDay.getMonth();
+    if (month !== lastMonth) {
+      monthLabels.push({ label: MONTHS[month], col: weekIdx });
+      lastMonth = month;
+    }
+  });
+
+  const hoveredData = hoveredCell ? grid[hoveredCell.col]?.[hoveredCell.row] : null;
+
+  const avgPerDay = totalContributions / 365;
+  const activeDays = validCounts.filter(c => c > 0).length;
+  const longestStreak = (() => {
+    let streak = 0, max = 0;
+    for (let i = validCounts.length - 1; i >= 0; i--) {
+      if (validCounts[i] > 0) { streak++; max = Math.max(max, streak); }
+      else streak = 0;
+    }
+    return max;
+  })();
+
   return (
-    <div className="grid grid-cols-7 gap-[3px]">
-      {data.map((val, i) => (
-        <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.015 }} className="aspect-square rounded-[3px] cursor-pointer hover:ring-2 hover:ring-primary-500/30 transition-all" style={{ backgroundColor: `rgba(59, 130, 246, ${0.08 + (val / max) * 0.85})` }} title={`${val} reviews`} />
-      ))}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-bold text-gray-900 dark:text-white">{totalContributions.toLocaleString()} contributions</span>
+          <span className="text-[11px] text-gray-400 dark:text-gray-500">in the last year</span>
+        </div>
+        <div className="flex items-center gap-4 text-[11px] text-gray-400 dark:text-gray-500">
+          <span><span className="font-medium text-gray-600 dark:text-gray-300">{activeDays}</span> active days</span>
+          <span>Longest streak: <span className="font-medium text-gray-600 dark:text-gray-300">{longestStreak}</span> days</span>
+          <span>Avg: <span className="font-medium text-gray-600 dark:text-gray-300">{avgPerDay.toFixed(1)}</span>/day</span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto pb-1">
+        <div className="inline-flex gap-0">
+          <div className="flex flex-col gap-[3px] mr-2 mt-5">
+            {DAY_LABELS.map((label, i) => (
+              <div key={i} className="h-[11px] flex items-center">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <div className="flex h-4 mb-1">
+              {grid.map((_, weekIdx) => {
+                const ml = monthLabels.find(m => m.col === weekIdx);
+                return (
+                  <div key={weekIdx} className="w-[13px] flex-shrink-0">
+                    {ml && (
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">{ml.label}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-[3px]">
+              {grid.map((week, weekIdx) => (
+                <div key={weekIdx} className="flex flex-col gap-[3px]">
+                  {week.map((cell) => (
+                    cell.count < 0 ? (
+                      <div key={`${cell.row}-${cell.col}`} className="w-[11px] h-[11px]" />
+                    ) : (
+                      <motion.div
+                        key={`${cell.row}-${cell.col}`}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{
+                          delay: Math.min(weekIdx * 2 + cell.row, 800) * 0.002,
+                          type: 'spring',
+                          stiffness: 400,
+                          damping: 25,
+                        }}
+                        onMouseEnter={(e) => {
+                          setHoveredCell({ row: cell.row, col: cell.col });
+                          setTooltipPos({ x: e.clientX, y: e.clientY });
+                        }}
+                        onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        className={`w-[11px] h-[11px] rounded-[2px] cursor-pointer transition-all duration-150 hover:ring-1 hover:ring-gray-400 dark:hover:ring-gray-500 hover:scale-[1.35] hover:z-10 relative ${getCellColor(cell.count)}`}
+                      />
+                    )
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {hoveredData && hoveredData.count >= 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ duration: 0.1 }}
+            className="fixed z-50 bg-gray-900 dark:bg-gray-800 text-white text-[11px] px-3 py-2 rounded-lg shadow-xl pointer-events-none border border-gray-700/50"
+            style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 44 }}
+          >
+            <span className="font-semibold">{hoveredData.count} contributions</span>
+            <span className="text-gray-400 ml-1.5">{hoveredData.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex items-center gap-1.5 justify-end pt-1 border-t border-gray-100 dark:border-dark-border">
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">Less</span>
+        <div className="w-[11px] h-[11px] rounded-[2px] bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05]" />
+        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-900/30 dark:bg-emerald-500/15" />
+        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-700/50 dark:bg-emerald-500/30" />
+        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-600/70 dark:bg-emerald-500/50" />
+        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-500/80 dark:bg-emerald-400/60" />
+        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-500 dark:bg-emerald-400" />
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">More</span>
+      </div>
     </div>
   );
 };
@@ -110,7 +304,6 @@ export const AnalyticsPage = () => {
 
   if (loading) return <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-32 bg-gray-100 dark:bg-dark-card rounded-card animate-pulse" />)}</div>;
 
-  const heatmapData = Array.from({ length: 28 }, () => Math.floor(Math.random() * 12) + 1);
   const criticalCount = issues.filter(i => i.severity === 'critical').length;
   const highCount = issues.filter(i => i.severity === 'high').length;
   const mediumCount = issues.filter(i => i.severity === 'medium').length;
@@ -206,28 +399,35 @@ export const AnalyticsPage = () => {
                   <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500" /><span className="text-[10px] text-gray-400">&lt;3.0</span></div>
                 </div>
               </div>
-              <div className="relative">
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
-                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
-                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
-                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
-                </div>
-                <div className="flex items-end gap-3 h-40 relative">
-                  {[4.2, 4.5, 3.8, 4.7, 4.1, 3.9, 4.4].map((score: number, i: number) => {
-                    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                    const color = score >= 4 ? 'from-emerald-500 to-emerald-400' : score >= 3 ? 'from-amber-500 to-amber-400' : 'from-rose-500 to-rose-400';
-                    const shadow = score >= 4 ? 'shadow-emerald-500/20' : score >= 3 ? 'shadow-amber-500/20' : 'shadow-rose-500/20';
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">{score.toFixed(1)}</span>
-                        <motion.div initial={{ height: 0 }} animate={{ height: `${(score / 5) * 100}%` }} transition={{ delay: i * 0.08, type: 'spring', stiffness: 120 }} className={`w-full max-w-[40px] rounded-t-lg bg-gradient-to-t ${color} shadow-lg ${shadow}`} />
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{labels[i]}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              {(() => {
+                const scores = [4.2, 4.5, 3.8, 4.7, 4.1, 3.9, 4.4];
+                const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                const maxH = 180;
+                return (
+                  <div>
+                    <div className="flex items-end justify-between" style={{ height: maxH }}>
+                      {scores.map((score, i) => {
+                        const barH = (score / 5) * maxH;
+                        const bg = score >= 4 ? 'rgb(16,185,129)' : score >= 3 ? 'rgb(245,158,11)' : 'rgb(239,68,68)';
+                        return (
+                          <div key={i} className="flex flex-col items-center" style={{ flex: 1 }}>
+                            <span className="text-[11px] font-bold mb-1" style={{ color: bg }}>{score}</span>
+                            <div
+                              className="rounded-t-md w-10 sm:w-12 cursor-pointer hover:opacity-80 transition-opacity"
+                              style={{ height: barH, backgroundColor: bg, boxShadow: `0 0 12px ${bg}55` }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      {labels.map((l, i) => (
+                        <span key={i} className="text-[10px] text-gray-400 dark:text-gray-500 font-medium" style={{ flex: 1, textAlign: 'center' }}>{l}</span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </motion.div>
           </motion.div>
         )}
@@ -297,20 +497,12 @@ export const AnalyticsPage = () => {
         {/* Heatmap & Activity */}
         {activeTab === 'heatmap' && (
           <motion.div key="heatmap" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Heatmap */}
-              <div className="lg:col-span-2 bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Review Activity (4 Weeks)</p>
-                <MiniHeatmap data={heatmapData} />
-                <div className="flex items-center justify-end gap-1.5 mt-3">
-                  <span className="text-[10px] text-gray-400">Less</span>
-                  {[0.08, 0.25, 0.45, 0.65, 0.9].map((op, i) => (
-                    <div key={i} className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: `rgba(59, 130, 246, ${op})` }} />
-                  ))}
-                  <span className="text-[10px] text-gray-400">More</span>
-                </div>
-              </div>
+            {/* GitHub-style Contribution Heatmap */}
+            <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
+              <GitHubHeatmap />
+            </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Team Contribution */}
               <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">Top Contributors</p>

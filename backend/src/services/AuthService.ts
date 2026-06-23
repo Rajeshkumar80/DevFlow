@@ -1,52 +1,60 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { Pool } from 'pg';
+import { prisma } from '../db/prisma';
 import { User, JWTPayload, LoginResponse } from '../types';
 
 export class AuthService {
-  private mockUsers: any[];
+  constructor(_db?: any) {}
 
-  constructor(private db: any) {
-    this.mockUsers = db.users || [];
-  }
-
-  async register(email: string, username: string, password: string, fullName?: string): Promise<User> {
+  async register(
+    email: string,
+    username: string,
+    password: string,
+    fullName?: string
+  ): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
-      id: `user-${Date.now()}`,
-      email, username,
-      password_hash: hashedPassword,
-      full_name: fullName || null,
-      avatar_url: null,
-      role: 'contributor',
-      created_at: new Date(),
-      updated_at: new Date(),
-      is_active: true,
-      preferences: {}
-    };
-    this.mockUsers.push(newUser);
-    return newUser as any;
+    const user = await prisma.user.create({
+      data: {
+        id: `user-${Date.now()}`,
+        email,
+        username,
+        password_hash: hashedPassword,
+        full_name: fullName || null,
+        role: 'contributor',
+      },
+    });
+    return user as any;
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
-    const user = this.mockUsers.find((u: any) => u.email === email && u.is_active);
+    const user = await prisma.user.findFirst({
+      where: { email, is_active: true },
+    });
     if (!user) throw new Error('Invalid credentials');
 
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) throw new Error('Invalid credentials');
 
-    user.last_login = new Date();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { last_login: new Date() },
+    });
 
     return {
       user: {
-        id: user.id, email: user.email, username: user.username,
-        full_name: user.full_name, avatar_url: user.avatar_url,
-        role: user.role, created_at: user.created_at,
-        updated_at: user.updated_at, is_active: user.is_active,
-        preferences: user.preferences || {}
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        full_name: user.full_name,
+        avatar_url: user.avatar_url,
+        role: user.role as any,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        is_active: user.is_active,
+        preferences: {},
       },
       accessToken: this.generateAccessToken(user),
-      refreshToken: this.generateRefreshToken(user)
+      refreshToken: this.generateRefreshToken(user),
     } as any;
   }
 
@@ -67,13 +75,18 @@ export class AuthService {
   }
 
   verifyToken(token: string): JWTPayload {
-    return jwt.verify(token, process.env.JWT_SECRET || 'devflow-super-secret-key') as JWTPayload;
+    return jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'devflow-super-secret-key'
+    ) as JWTPayload;
   }
 
   async refreshAccessToken(refreshToken: string): Promise<string> {
     try {
       const decoded = this.verifyToken(refreshToken);
-      const user = this.mockUsers.find((u: any) => u.id === decoded.userId && u.is_active);
+      const user = await prisma.user.findFirst({
+        where: { id: decoded.userId, is_active: true },
+      });
       if (!user) throw new Error('User not found');
       return this.generateAccessToken(user);
     } catch {

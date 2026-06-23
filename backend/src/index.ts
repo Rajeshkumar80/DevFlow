@@ -12,8 +12,10 @@ import { createNotificationRouter } from './routes/notifications';
 import { createAnalyticsRouter } from './routes/analytics';
 import { createRepositoryRouter } from './routes/repositories';
 import { createSessionRouter } from './routes/sessions';
+import settingsRouter from './routes/settings';
 import { RealtimeService } from './services/RealtimeService';
 import { errorHandler } from './middleware/errorHandler';
+import { prisma } from './db/prisma';
 import logger from './utils/logger';
 
 dotenv.config();
@@ -100,6 +102,7 @@ app.use('/api/v1/notifications', createNotificationRouter(mockDb));
 app.use('/api/v1/analytics', createAnalyticsRouter(mockDb));
 app.use('/api/v1/repositories', createRepositoryRouter(mockDb));
 app.use('/api/v1/sessions', createSessionRouter(mockDb));
+app.use('/api/v1/settings', settingsRouter);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   errorHandler(err, req, res, next);
@@ -107,9 +110,54 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 const realtimeService = new RealtimeService(httpServer, mockDb);
 
-async function start() {
+async function seedDatabase() {
   const hash = await bcrypt.hash('demo123', 10);
-  mockDb.users.forEach((u: any) => { u.password_hash = hash; });
+
+  for (const u of mockDb.users) {
+    u.password_hash = hash;
+    await prisma.user.upsert({
+      where: { id: u.id },
+      update: {},
+      create: {
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        password_hash: hash,
+        full_name: u.full_name,
+        role: u.role,
+        bio: u.bio,
+        is_active: u.is_active,
+      },
+    });
+  }
+
+  await prisma.repository.upsert({
+    where: { id: 'repo-1' },
+    update: {},
+    create: {
+      id: 'repo-1',
+      name: 'devflow-app',
+      owner_id: 'user-1',
+      primary_language: 'TypeScript',
+      description: 'AI-powered code review platform',
+    },
+  });
+
+  await prisma.setting.upsert({
+    where: { key: 'openrouter_model' },
+    update: {},
+    create: { key: 'openrouter_model', value: 'google/gemini-2.0-flash-001' },
+  });
+
+  logger.info('Database seeded with demo data');
+}
+
+async function start() {
+  try {
+    await seedDatabase();
+  } catch (err: any) {
+    logger.warn('Seeding warning: ' + err.message);
+  }
 
   httpServer.listen(PORT, () => {
     logger.info(`DevFlow API running on http://localhost:${PORT}`);

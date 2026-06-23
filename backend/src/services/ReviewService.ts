@@ -1,58 +1,113 @@
-import { Pool } from 'pg';
+import { prisma } from '../db/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { CodeReview } from '../types';
 
 export class ReviewService {
-  constructor(private db: any) {}
-
-  async createReview(repoId: string, title: string, description: string, authorId: string, branchName: string, baseBranch = 'main', codeFiles?: { name: string; content: string }[]): Promise<CodeReview> {
+  async createReview(
+    repoId: string,
+    title: string,
+    description: string,
+    authorId: string,
+    branchName: string,
+    baseBranch = 'main',
+    codeFiles?: { name: string; content: string }[]
+  ): Promise<any> {
     const filesChanged = codeFiles ? codeFiles.length : 0;
-    const additions = codeFiles ? codeFiles.reduce((sum, f) => sum + f.content.split('\n').length, 0) : 0;
-    const review = {
-      id: uuidv4(), repo_id: repoId, title, description, author_id: authorId,
-      branch_name: branchName, base_branch: baseBranch, status: 'open',
-      files_changed: filesChanged, additions, deletions: 0, ai_score: null,
-      complexity_score: null, priority: 'medium', created_at: new Date(),
-      updated_at: new Date(), metadata: {}, code_files: codeFiles || []
-    } as any;
-    if (this.db.reviews) this.db.reviews.push(review);
+    const additions = codeFiles
+      ? codeFiles.reduce((sum, f) => sum + f.content.split('\n').length, 0)
+      : 0;
+
+    // Ensure repo exists (create a stub if needed)
+    await prisma.repository.upsert({
+      where: { id: repoId },
+      create: { id: repoId, name: repoId, owner_id: authorId },
+      update: {},
+    });
+
+    const review = await prisma.review.create({
+      data: {
+        id: uuidv4(),
+        repo_id: repoId,
+        title,
+        description: description || '',
+        author_id: authorId,
+        branch_name: branchName,
+        base_branch: baseBranch,
+        status: 'open',
+        files_changed: filesChanged,
+        additions,
+        deletions: 0,
+        priority: 'medium',
+        codeFiles: codeFiles
+          ? {
+              create: codeFiles.map((f) => ({
+                id: uuidv4(),
+                name: f.name,
+                content: f.content,
+              })),
+            }
+          : undefined,
+      },
+      include: { codeFiles: true },
+    });
+
     return review;
   }
 
-  async getReview(reviewId: string): Promise<CodeReview | null> {
-    if (this.db.reviews) {
-      const r = this.db.reviews.find((x: any) => x.id === reviewId);
-      if (r) return { ...r, author_username: 'demo', author_avatar: null };
-    }
-    return null;
+  async getReview(reviewId: string): Promise<any | null> {
+    return prisma.review.findUnique({
+      where: { id: reviewId },
+      include: { codeFiles: true, issues: true, comments: true },
+    });
   }
 
-  async listReviews(repoId: string, status?: string, limit = 20, offset = 0): Promise<CodeReview[]> {
-    let reviews = this.db.reviews || [];
-    if (status) reviews = reviews.filter((r: any) => r.status === status);
-    return reviews.slice(offset, offset + limit).map((r: any) => ({ ...r, author_username: 'demo', author_avatar: null }));
+  async listReviews(
+    repoId: string,
+    status?: string,
+    limit = 20,
+    offset = 0
+  ): Promise<any[]> {
+    const where: any = { repo_id: repoId };
+    if (status) where.status = status;
+
+    return prisma.review.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      take: limit,
+      skip: offset,
+      include: { codeFiles: true },
+    });
   }
 
-  async updateReviewStatus(reviewId: string, status: string): Promise<CodeReview | null> {
-    if (this.db.reviews) {
-      const r = this.db.reviews.find((x: any) => x.id === reviewId);
-      if (r) { r.status = status; r.updated_at = new Date(); if (status === 'merged') r.merged_at = new Date(); return r; }
+  async updateReviewStatus(
+    reviewId: string,
+    status: string
+  ): Promise<any | null> {
+    try {
+      return await prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          status,
+          ...(status === 'merged' ? { merged_at: new Date() } : {}),
+        },
+      });
+    } catch {
+      return null;
     }
-    return null;
   }
 
-  async updateReview(reviewId: string, data: Partial<CodeReview>): Promise<CodeReview | null> {
-    if (this.db.reviews) {
-      const r = this.db.reviews.find((x: any) => x.id === reviewId);
-      if (r) { Object.assign(r, data); r.updated_at = new Date(); return r; }
+  async updateReview(reviewId: string, data: any): Promise<any | null> {
+    try {
+      return await prisma.review.update({
+        where: { id: reviewId },
+        data: { ...data, updated_at: new Date() },
+      });
+    } catch {
+      return null;
     }
-    return null;
   }
 
   async deleteReview(reviewId: string): Promise<void> {
-    if (this.db.reviews) {
-      const idx = this.db.reviews.findIndex((x: any) => x.id === reviewId);
-      if (idx >= 0) this.db.reviews.splice(idx, 1);
-    }
+    await prisma.review.delete({ where: { id: reviewId } });
   }
 }

@@ -1,41 +1,63 @@
-import { Pool } from 'pg';
+import { prisma } from '../db/prisma';
 import { v4 as uuidv4 } from 'uuid';
-import { ReviewComment } from '../types';
 
 export class CommentService {
-  constructor(private db: any) {}
+  constructor(_db?: any) {}
 
-  async addComment(reviewId: string, authorId: string, filePath: string, lineNumber: number, content: string, isSuggestion = false, suggestionText?: string, threadId?: string): Promise<ReviewComment> {
-    const comment = {
-      id: uuidv4(), review_id: reviewId, author_id: authorId,
-      file_path: filePath, line_number: lineNumber, content,
-      is_suggestion: isSuggestion, suggestion_text: suggestionText || null,
-      thread_id: threadId || null, resolved: false,
-      created_at: new Date(), updated_at: new Date(),
-      author_username: 'demo', author_avatar: null
-    } as any;
-    if (this.db.comments) this.db.comments.push(comment);
-    return comment;
+  async addComment(
+    reviewId: string,
+    authorId: string,
+    filePath: string | null,
+    lineNumber: number | null,
+    content: string,
+    isSuggestion = false,
+    suggestionText?: string,
+    threadId?: string
+  ): Promise<any> {
+    return prisma.comment.create({
+      data: {
+        id: uuidv4(),
+        review_id: reviewId,
+        author_id: authorId,
+        file_path: filePath || null,
+        line_number: lineNumber || null,
+        content,
+        is_suggestion: isSuggestion,
+        suggestion_text: suggestionText || null,
+        thread_id: threadId || null,
+        resolved: false,
+      },
+      include: { author: { select: { username: true, avatar_url: true } } },
+    });
   }
 
-  async getComments(reviewId: string): Promise<ReviewComment[]> {
-    return (this.db.comments || []).filter((c: any) => c.review_id === reviewId);
+  async getComments(reviewId: string): Promise<any[]> {
+    return prisma.comment.findMany({
+      where: { review_id: reviewId },
+      orderBy: { created_at: 'asc' },
+      include: { author: { select: { username: true, avatar_url: true } } },
+    });
   }
 
-  async getComment(commentId: string): Promise<ReviewComment | null> {
-    return (this.db.comments || []).find((c: any) => c.id === commentId) || null;
+  async getComment(commentId: string): Promise<any | null> {
+    return prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { author: { select: { username: true, avatar_url: true } } },
+    });
   }
 
-  async resolveComment(commentId: string): Promise<ReviewComment | null> {
-    const c = (this.db.comments || []).find((x: any) => x.id === commentId);
-    if (c) { c.resolved = true; c.updated_at = new Date(); }
-    return c || null;
+  async resolveComment(commentId: string): Promise<any | null> {
+    try {
+      return await prisma.comment.update({
+        where: { id: commentId },
+        data: { resolved: true, updated_at: new Date() },
+      });
+    } catch {
+      return null;
+    }
   }
 
   async deleteComment(commentId: string): Promise<void> {
-    if (this.db.comments) {
-      const idx = this.db.comments.findIndex((x: any) => x.id === commentId);
-      if (idx >= 0) this.db.comments.splice(idx, 1);
-    }
+    await prisma.comment.delete({ where: { id: commentId } });
   }
 }
