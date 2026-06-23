@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, Pause, StopCircle, Users, MessageSquare, Code, Terminal, Video, Plus, ArrowLeft, Copy, Check } from 'lucide-react';
+import { Play, Pause, StopCircle, Users, MessageSquare, Code, Terminal, Video, Plus, ArrowLeft, Copy, Check, LogIn } from 'lucide-react';
 import { connectSocket, joinSessionRoom, emitSessionCodeChange, emitSessionChatMessage } from '../../services/socket';
 import { useAuthStore } from '../../store/authStore';
 import { sessionApi } from '../../services/sessionApi';
@@ -19,8 +19,10 @@ export const PairSessionPage = () => {
   const [participants, setParticipants] = useState(1);
   const [activeTab, setActiveTab] = useState<'code' | 'terminal'>('code');
   const [newSessionName, setNewSessionName] = useState('');
+  const [joinId, setJoinId] = useState('');
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadSessions();
@@ -36,10 +38,13 @@ export const PairSessionPage = () => {
 
   const joinSession = async (sid: string) => {
     setJoining(true);
+    setError('');
     try {
       let s = await sessionApi.getSession(sid).catch(() => null);
       if (!s) {
-        s = await sessionApi.createSession({ name: 'Pair Session', creatorId: user?.id || 'user-1' });
+        setError('Session not found. Check the ID and try again.');
+        setJoining(false);
+        return;
       }
       if (user?.id) {
         await sessionApi.joinSession(sid, user.id).catch(() => {});
@@ -66,11 +71,19 @@ export const PairSessionPage = () => {
       });
 
       setParticipants(s.participants?.length || 1);
-    } catch {} finally { setJoining(false); }
+    } catch {
+      setError('Failed to join session');
+    } finally { setJoining(false); }
+  };
+
+  const handleJoinById = () => {
+    if (!joinId.trim()) return;
+    navigate(`/pair/${joinId.trim()}`);
   };
 
   const handleCreateSession = async () => {
     setJoining(true);
+    setError('');
     try {
       const s = await sessionApi.createSession({
         name: newSessionName || 'Pair Session',
@@ -80,7 +93,7 @@ export const PairSessionPage = () => {
       navigate(`/pair/${s.id}`);
       await joinSession(s.id);
       setShowCreate(false);
-    } catch {} finally { setJoining(false); }
+    } catch { setError('Failed to create session'); } finally { setJoining(false); }
   };
 
   const handleCodeChange = (val: string) => {
@@ -111,23 +124,40 @@ export const PairSessionPage = () => {
   if (showCreate && !sessionId) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Pair Programming</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Real-time collaborative coding</p>
-          </div>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Pair Programming</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Real-time collaborative coding with your team</p>
         </div>
 
-        <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-5 shadow-card">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Create New Session</h3>
-          <div className="flex gap-3">
-            <input value={newSessionName} onChange={e => setNewSessionName(e.target.value)} className="input flex-1" placeholder="Session name (optional)" />
-            <button onClick={handleCreateSession} disabled={joining} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-btn transition-all flex items-center gap-1.5">
-              <Plus size={16} /> {joining ? 'Creating...' : 'Start Session'}
+        {/* Create or Join */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Create */}
+          <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-5 shadow-card">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400"><Plus size={16} /></div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Create Session</h3>
+            </div>
+            <input value={newSessionName} onChange={e => setNewSessionName(e.target.value)} className="input mb-3" placeholder="Session name (optional)" />
+            <button onClick={handleCreateSession} disabled={joining} className="w-full px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-btn transition-all flex items-center justify-center gap-1.5">
+              <Plus size={16} /> {joining ? 'Creating...' : 'Start New Session'}
             </button>
           </div>
+
+          {/* Join */}
+          <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-5 shadow-card">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400"><LogIn size={16} /></div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Join Session</h3>
+            </div>
+            <input value={joinId} onChange={e => setJoinId(e.target.value)} className="input mb-3" placeholder="Paste session ID here" onKeyDown={e => e.key === 'Enter' && handleJoinById()} />
+            <button onClick={handleJoinById} disabled={!joinId.trim()} className="w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-btn transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">
+              <LogIn size={16} /> Join Session
+            </button>
+            {error && <p className="text-xs text-rose-500 mt-2">{error}</p>}
+          </div>
         </div>
 
+        {/* Active Sessions */}
         {sessions.length > 0 && (
           <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card">
             <div className="p-5 pb-3">
@@ -135,7 +165,7 @@ export const PairSessionPage = () => {
             </div>
             <div className="divide-y divide-gray-100 dark:divide-dark-border">
               {sessions.map((s) => (
-                <div key={s.id} onClick={() => navigate(`/pair/${s.id}`)} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-dark-hover transition-colors cursor-pointer">
+                <div key={s.id} onClick={() => navigate(`/pair/${s.id}`)} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-dark-hover transition-colors cursor-pointer group">
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${s.status === 'active' ? 'bg-emerald-500' : s.status === 'paused' ? 'bg-amber-500' : 'bg-gray-400'}`} />
                     <div>
@@ -143,7 +173,12 @@ export const PairSessionPage = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400">{s.participants?.length || 0} participants · {s.status}</p>
                     </div>
                   </div>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(s.created_at).toLocaleDateString()}</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(s.id); }} className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-surface text-gray-400 transition-all" title="Copy session ID">
+                      <Copy size={13} />
+                    </button>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(s.created_at).toLocaleDateString()}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -160,7 +195,7 @@ export const PairSessionPage = () => {
         <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border px-4 py-2.5 flex items-center justify-between shadow-card">
           <div className="flex items-center gap-3">
             <button onClick={() => { navigate('/pair'); setShowCreate(true); }} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface text-gray-400"><ArrowLeft size={16} /></button>
-            <div className="flex items-center gap-1.5"><Video size={16} className="text-primary-500" /><h3 className="font-medium text-gray-900 dark:text-white text-sm">{session?.name || 'Pair Session'}</h3></div>
+            <div className="flex items-center gap-1.5"><Video size={16} className="text-violet-500" /><h3 className="font-medium text-gray-900 dark:text-white text-sm">{session?.name || 'Pair Session'}</h3></div>
             <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><Users size={13} /> {participants}</span>
             <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
               status === 'active' ? 'badge-green' : status === 'paused' ? 'badge-amber' : 'badge-slate'
