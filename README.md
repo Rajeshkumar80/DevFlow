@@ -113,10 +113,4 @@ DevFlow/
 
 ## Environment
 
-Backend config via `.env`:
-```
-PORT=5000
-DATABASE_URL=postgresql://devflow_user:dev_password_123@localhost:5432/devflow_dev
-JWT_SECRET=devflow-super-secret-key
-ANTHROPIC_API_KEY=  # Optional — for real AI analysis
-```
+Backend config via `.env` (see `backend/.env.example` for template).
