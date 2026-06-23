@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Code2, Shield, Zap, Users, BarChart3, CheckCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Code2, Shield, Zap, Users, BarChart3, CheckCircle, Star } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { authApi } from '../../services/authApi';
 
@@ -26,90 +26,118 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-dark-bg">
+    <div className="min-h-screen flex bg-white dark:bg-dark-bg">
       {/* Left — Login Form */}
-      <div className="w-full lg:w-[480px] flex flex-col justify-center px-8 sm:px-12 lg:px-16">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
-          <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
-              <Code2 size={20} className="text-white" />
+      <div className="w-full lg:w-[460px] flex flex-col justify-center px-8 sm:px-12 lg:px-14 xl:px-16 bg-gray-50/50 dark:bg-dark-bg">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-[340px] mx-auto">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 mb-10">
+            <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center shadow-sm">
+              <Code2 size={18} className="text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">DevFlow</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">DevFlow</span>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Welcome back</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Sign in to continue to your dashboard</p>
+          {/* Heading */}
+          <h1 className="text-[22px] font-bold text-gray-900 dark:text-white mb-1.5">Sign in</h1>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-7">Welcome back to your code review platform</p>
 
+          {/* Error */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-btn text-red-700 dark:text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg text-red-700 dark:text-red-400 text-[13px]">
               {error}
             </div>
           )}
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="label">Email</label>
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input pl-9" placeholder="you@company.com" required />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={15} />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card text-gray-900 dark:text-gray-100 text-[13px] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all" placeholder="demo@devflow.ai" required />
               </div>
             </div>
             <div>
-              <label className="label">Password</label>
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input pl-9" placeholder="••••••••" required />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={15} />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card text-gray-900 dark:text-gray-100 text-[13px] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all" placeholder="demo123" required />
               </div>
             </div>
-            <button type="submit" disabled={loading} className="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-btn transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
-              {loading ? 'Signing in...' : 'Sign In'} {!loading && <ArrowRight size={16} />}
+            <button type="submit" disabled={loading} className="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 text-[13px] mt-1 shadow-sm">
+              {loading ? 'Signing in...' : 'Sign in'} {!loading && <ArrowRight size={15} />}
             </button>
           </form>
 
-          <p className="mt-5 text-center text-gray-500 dark:text-gray-400 text-sm">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">Create one</Link>
+          {/* Footer */}
+          <p className="mt-5 text-center text-[13px] text-gray-500 dark:text-gray-400">
+            No account? <Link to="/register" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">Create one</Link>
           </p>
 
-          <div className="mt-6 p-3 bg-gray-100 dark:bg-dark-surface rounded-btn border border-gray-200 dark:border-dark-border">
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              Demo: <span className="text-primary-600 dark:text-primary-400 font-medium">demo@devflow.ai</span> / <span className="text-primary-600 dark:text-primary-400 font-medium">demo123</span>
+          {/* Demo Hint */}
+          <div className="mt-6 p-3 rounded-lg border border-gray-200 dark:border-dark-border bg-gray-100/50 dark:bg-dark-surface">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 text-center leading-relaxed">
+              Demo: <span className="text-primary-600 dark:text-primary-400 font-medium">demo@devflow.ai</span> <span className="text-gray-300 dark:text-gray-600">·</span> <span className="text-primary-600 dark:text-primary-400 font-medium">demo123</span>
             </p>
           </div>
         </motion.div>
       </div>
 
       {/* Right — About Section */}
-      <div className="hidden lg:flex flex-1 bg-dark-card dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border">
-        <div className="flex flex-col justify-center px-12 xl:px-16 max-w-xl">
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
-              AI-Powered Code Review Platform
+      <div className="hidden lg:flex flex-1 items-center bg-dark-card dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border overflow-hidden">
+        <div className="w-full max-w-[520px] px-12 xl:px-16">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+            {/* Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-500/20 mb-6">
+              <Star size={12} className="text-primary-600 dark:text-primary-400" />
+              <span className="text-[11px] font-medium text-primary-700 dark:text-primary-400">Trusted by 2,000+ teams</span>
+            </div>
+
+            {/* Title */}
+            <h2 className="text-[28px] font-bold text-gray-900 dark:text-white leading-tight mb-3">
+              Ship better code,<br />faster together
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-8">
-              DevFlow helps teams ship better code faster with intelligent analysis, real-time collaboration, and actionable insights.
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed mb-8 max-w-[400px]">
+              AI-powered code reviews, real-time pair programming, and team analytics — all in one place.
             </p>
 
-            <div className="space-y-5">
+            {/* Features Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
               {[
-                { icon: Shield, title: 'AI Code Analysis', desc: 'Automated review detects bugs, security issues, and performance problems before they reach production', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-                { icon: Users, title: 'Real-Time Pair Programming', desc: 'Code together with live sync, chat, and shared cursor tracking across your team', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
-                { icon: BarChart3, title: 'Team Analytics', desc: 'Track review velocity, code quality scores, and team performance with interactive dashboards', color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-500/10' },
-                { icon: Zap, title: 'Smart Workflows', desc: 'Automated review assignments, notifications, and integration with your existing Git workflow', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+                { icon: Shield, title: 'AI Analysis', desc: 'Auto-detect bugs & security issues', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+                { icon: Users, title: 'Pair Coding', desc: 'Real-time collaborative editor', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
+                { icon: BarChart3, title: 'Analytics', desc: 'Track team performance metrics', color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-500/10' },
+                { icon: Zap, title: 'Workflows', desc: 'Automated review assignments', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
               ].map((feature, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.1 }} className="flex gap-3">
-                  <div className={`p-2 rounded-lg h-fit ${feature.bg} ${feature.color}`}><feature.icon size={16} /></div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{feature.title}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{feature.desc}</p>
+                <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.08 }} className="p-3.5 rounded-xl border border-gray-200/60 dark:border-dark-border bg-white/50 dark:bg-dark-card/50 hover:shadow-sm transition-all">
+                  <div className={`w-8 h-8 rounded-lg ${feature.bg} ${feature.color} flex items-center justify-center mb-2.5`}>
+                    <feature.icon size={16} />
                   </div>
+                  <h4 className="text-[13px] font-semibold text-gray-900 dark:text-white mb-0.5">{feature.title}</h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{feature.desc}</p>
                 </motion.div>
               ))}
             </div>
 
-            <div className="mt-8 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
-              <span className="flex items-center gap-1"><CheckCircle size={12} className="text-emerald-500" /> Free for small teams</span>
-              <span className="flex items-center gap-1"><CheckCircle size={12} className="text-emerald-500" /> No credit card required</span>
+            {/* Social Proof */}
+            <div className="flex items-center gap-5 text-[11px] text-gray-400 dark:text-gray-500">
+              <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-emerald-500" /> Free for small teams</span>
+              <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-emerald-500" /> No credit card</span>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-8 mt-8 pt-6 border-t border-gray-200/60 dark:border-dark-border">
+              {[
+                { value: '12k+', label: 'Reviews' },
+                { value: '2k+', label: 'Teams' },
+                { value: '4.9', label: 'Rating' },
+              ].map((stat, i) => (
+                <div key={i}>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{stat.label}</p>
+                </div>
+              ))}
             </div>
           </motion.div>
         </div>
