@@ -276,12 +276,12 @@ export const SettingsPage = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center"><Zap size={16} className="text-white" /></div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Powered by OpenRouter</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">AI-Powered Reviews</p>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400">Access 100+ AI models with a single API key</p>
                   </div>
                 </div>
                 <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
-                  Open OpenRouter Dashboard <ExternalLink size={12} />
+                  Get API Key from OpenRouter <ExternalLink size={12} />
                 </a>
               </div>
 

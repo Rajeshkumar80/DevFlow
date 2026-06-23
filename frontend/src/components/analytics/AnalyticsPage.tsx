@@ -198,14 +198,35 @@ export const AnalyticsPage = () => {
 
             {/* Trend */}
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-5 shadow-card">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">AI Scores Trend (Last 7 Reviews)</p>
-              <div className="flex items-end gap-3 h-36">
-                {[4.2, 4.5, 3.8, 4.7, 4.1, 3.9, 4.4].map((score: number, i: number) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <motion.div initial={{ height: 0 }} animate={{ height: `${(score / 5) * 100}%` }} transition={{ delay: i * 0.08, type: 'spring' }} className="w-full rounded-t" style={{ backgroundColor: score >= 4 ? '#10b981' : score >= 3 ? '#f59e0b' : '#ef4444' }} />
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{score.toFixed(1)}</span>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">AI Scores Trend (Last 7 Reviews)</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-[10px] text-gray-400">4.0+</span></div>
+                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500" /><span className="text-[10px] text-gray-400">3.0-3.9</span></div>
+                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500" /><span className="text-[10px] text-gray-400">&lt;3.0</span></div>
+                </div>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
+                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
+                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
+                  <div className="border-b border-dashed border-gray-100 dark:border-dark-border" />
+                </div>
+                <div className="flex items-end gap-3 h-40 relative">
+                  {[4.2, 4.5, 3.8, 4.7, 4.1, 3.9, 4.4].map((score: number, i: number) => {
+                    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    const color = score >= 4 ? 'from-emerald-500 to-emerald-400' : score >= 3 ? 'from-amber-500 to-amber-400' : 'from-rose-500 to-rose-400';
+                    const shadow = score >= 4 ? 'shadow-emerald-500/20' : score >= 3 ? 'shadow-amber-500/20' : 'shadow-rose-500/20';
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">{score.toFixed(1)}</span>
+                        <motion.div initial={{ height: 0 }} animate={{ height: `${(score / 5) * 100}%` }} transition={{ delay: i * 0.08, type: 'spring', stiffness: 120 }} className={`w-full max-w-[40px] rounded-t-lg bg-gradient-to-t ${color} shadow-lg ${shadow}`} />
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{labels[i]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </motion.div>
           </motion.div>

@@ -221,7 +221,7 @@ export const LearningPage = () => {
   const [expandedPathId, setExpandedPathId] = useState<string | null>(null);
   const [activeLesson, setActiveLesson] = useState<{ pathId: string; lessonId: string } | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
-  const currentStreak = 5;
+  const currentStreak: number = 5;
   const totalHours = skillCategories.reduce((a, s) => a + s.hours, 0);
   const avgProgress = Math.round(skillCategories.reduce((a, s) => a + s.progress, 0) / skillCategories.length);
 
@@ -276,7 +276,11 @@ export const LearningPage = () => {
             <Flame size={16} className="text-orange-500" />
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Weekly Activity</h3>
           </div>
-          <span className="text-xs text-gray-400 dark:text-gray-500">{currentStreak} day streak</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20">
+            <Flame size={12} className="text-orange-500" />
+            <span className="text-[11px] font-semibold text-orange-600 dark:text-orange-400">{currentStreak}</span>
+            <span className="text-[10px] text-orange-500 dark:text-orange-400">day{currentStreak !== 1 ? 's' : ''}</span>
+          </div>
         </div>
         <div className="flex items-end gap-2 h-28">
           {weeklyStreak.map((day, i) => {
@@ -289,7 +293,7 @@ export const LearningPage = () => {
                     initial={{ height: 0 }}
                     animate={{ height: `${barHeight}px` }}
                     transition={{ delay: i * 0.05, type: 'spring', stiffness: 200, damping: 15 }}
-                    className={`w-full max-w-[36px] rounded-t-md ${day.done ? 'bg-gradient-to-t from-orange-600 to-orange-400 dark:from-orange-500 dark:to-orange-300' : 'bg-gray-200 dark:bg-dark-surface'}`}
+                    className={`w-full max-w-[36px] rounded-t-md ${day.done ? 'bg-gradient-to-t from-orange-600 to-orange-400 dark:from-orange-500 dark:to-orange-300 shadow-lg shadow-orange-500/20' : 'bg-gray-200 dark:bg-dark-surface'}`}
                   />
                 </div>
                 <span className={`text-[11px] font-medium mt-2 ${day.done ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>{day.day}</span>
