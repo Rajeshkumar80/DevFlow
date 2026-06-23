@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Bell, Shield, Palette, Key, Save, Check, Moon, Sun, Monitor, Users, Mail, X, Copy, Trash2, Crown } from 'lucide-react';
+import { User, Bell, Shield, Palette, Key, Save, Check, Moon, Sun, Monitor, Users, Mail, X, Copy, Trash2, Crown, ExternalLink, Zap } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 
@@ -241,14 +241,79 @@ export const SettingsPage = () => {
           )}
 
           {activeTab === 'api' && (
-            <div className="space-y-4">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">API Keys</h2>
-              <div className="p-3 rounded-btn bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2"><Shield size={14} /> API keys give full access to your account. Keep them secret.</div>
-              <div className="flex items-center gap-2 p-3 rounded-btn bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border">
-                <code className="flex-1 text-xs text-gray-500 dark:text-gray-400 font-mono">df_sk_••••••••••••••••••••</code>
-                <button className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">Reveal</button>
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">AI Configuration</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Connect an AI provider to enable intelligent code reviews, learning recommendations, and pair programming assistance.</p>
               </div>
-              <button className="px-4 py-2 rounded-btn border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-hover transition-all text-xs font-medium">Generate New Key</button>
+
+              <div className="p-4 rounded-btn bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 border border-blue-200 dark:border-blue-500/20 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center"><Zap size={16} className="text-white" /></div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Powered by OpenRouter</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Access 100+ AI models with a single API key</p>
+                  </div>
+                </div>
+                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                  Open OpenRouter Dashboard <ExternalLink size={12} />
+                </a>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">How to get your free API key:</p>
+                <ol className="space-y-2.5">
+                  {[
+                    { step: 1, title: 'Create an account', desc: 'Go to openrouter.ai and sign up with Google or GitHub', icon: '1' },
+                    { step: 2, title: 'Navigate to Keys', desc: 'Click "Keys" in the left sidebar or visit openrouter.ai/keys', icon: '2' },
+                    { step: 3, title: 'Create a new key', desc: 'Click "Create Key", name it "DevFlow", and copy the key', icon: '3' },
+                    { step: 4, title: 'Add credits (optional)', desc: 'Free tier includes limited credits. Add $5+ for extended usage', icon: '4' },
+                  ].map((item) => (
+                    <li key={item.step} className="flex gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-500/10 flex items-center justify-center">
+                        <span className="text-[11px] font-bold text-primary-600 dark:text-primary-400">{item.icon}</span>
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-medium text-gray-900 dark:text-white">{item.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-dark-border pt-4 space-y-3">
+                <label className="label">OpenRouter API Key</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input type="password" defaultValue="sk-or-v1-••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••" className="input pr-10 font-mono text-xs" placeholder="sk-or-v1-..." />
+                  </div>
+                </div>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1"><Shield size={11} /> Stored locally in your browser. Never sent to our servers.</p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Available AI Models:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { name: 'GPT-4o Mini', provider: 'OpenAI', free: true, badge: 'Fast' },
+                    { name: 'Claude 3.5 Haiku', provider: 'Anthropic', free: true, badge: 'Smart' },
+                    { name: 'Gemini 2.0 Flash', provider: 'Google', free: true, badge: 'New' },
+                    { name: 'Llama 3.1 8B', provider: 'Meta', free: true, badge: 'Open' },
+                  ].map((model) => (
+                    <div key={model.name} className="flex items-center justify-between p-2.5 rounded-btn bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <div>
+                          <p className="text-xs font-medium text-gray-900 dark:text-white">{model.name}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400">{model.provider}</p>
+                        </div>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">{model.badge}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
