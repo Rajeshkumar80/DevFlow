@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    @apply antialiased;
+  }
+
+  ::selection {
+    @apply bg-primary-500/20 text-primary-900 dark:text-primary-100;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  .dark ::-webkit-scrollbar-thumb { background: #334155; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+}
+
+@layer components {
+  .input {
+    @apply w-full px-3 py-2 rounded-btn border border-gray-200 dark:border-dark-border
+           bg-white dark:bg-dark-card text-gray-900 dark:text-gray-100
+           placeholder-gray-400 dark:placeholder-gray-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+           transition-all text-sm;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-green {
+    @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200
+           dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20;
+  }
+
+  .badge-amber {
+    @apply badge bg-amber-50 text-amber-700 border border-amber-200
+           dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20;
+  }
+
+  .badge-rose {
+    @apply badge bg-rose-50 text-rose-700 border border-rose-200
+           dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20;
+  }
+
+  .badge-slate {
+    @apply badge bg-gray-100 text-gray-600 border border-gray-200
+           dark:bg-dark-card dark:text-gray-400 dark:border-dark-border;
+  }
+
+  .badge-blue {
+    @apply badge bg-primary-50 text-primary-700 border border-primary-200
+           dark:bg-primary-500/10 dark:text-primary-400 dark:border-primary-500/20;
+  }
+}

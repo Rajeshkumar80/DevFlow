@@ -1,0 +1,273 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications alt+T"
+    - banner [ref=e3]:
+      - link "New Chat" [ref=e5] [cursor=pointer]:
+        - /url: /chat
+        - img
+        - generic [ref=e6]: New Chat
+      - generic [ref=e8]:
+        - navigation "Main":
+          - list [ref=e10]:
+            - listitem [ref=e11]:
+              - button "Templates" [ref=e12] [cursor=pointer]:
+                - text: Templates
+                - img
+            - listitem [ref=e13]:
+              - button "Resources" [ref=e14] [cursor=pointer]:
+                - text: Resources
+                - img
+            - listitem [ref=e15]:
+              - link "Enterprise" [ref=e16] [cursor=pointer]:
+                - /url: /enterprise
+            - listitem [ref=e17]:
+              - link "Pricing" [ref=e18] [cursor=pointer]:
+                - /url: /pricing
+            - listitem [ref=e19]:
+              - link "iOS" [ref=e20] [cursor=pointer]:
+                - /url: /ios
+            - listitem [ref=e21]:
+              - link "Students" [ref=e22] [cursor=pointer]:
+                - /url: /students
+            - listitem [ref=e23]:
+              - link "FAQ" [ref=e24] [cursor=pointer]:
+                - /url: /faq
+        - generic [ref=e25]:
+          - link "Sign In" [ref=e26] [cursor=pointer]:
+            - /url: /api/auth/login?next=%2Ftemplates%2Fcms-full-form-admin-dashboard-tailwind-templates-d7j5B58dlp4
+          - link "Sign Up" [ref=e27] [cursor=pointer]:
+            - /url: /api/auth/login?next=%2Ftemplates%2Fcms-full-form-admin-dashboard-tailwind-templates-d7j5B58dlp4&action=signup
+    - generic [ref=e29]:
+      - banner
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - navigation "breadcrumb" [ref=e34]:
+              - list [ref=e35]:
+                - listitem [ref=e36]:
+                  - link "Templates" [ref=e37] [cursor=pointer]:
+                    - /url: /templates
+                - listitem [ref=e38]:
+                  - img [ref=e39]
+                - link "Dashboards" [ref=e41] [cursor=pointer]:
+                  - /url: /templates/dashboards
+                - listitem [ref=e42]:
+                  - img [ref=e43]
+                - link "Cms Full Form - Admin Dashboard Tailwind Templates" [disabled] [ref=e45]
+            - generic [ref=e46]:
+              - generic [ref=e47]:
+                - generic [ref=e49]: Cms Full Form - Admin Dashboard Tailwind Templates
+                - generic [ref=e50]:
+                  - link:
+                    - /url: /@swoole
+                  - link [ref=e51] [cursor=pointer]:
+                    - /url: /@swoole
+                  - paragraph [ref=e53]: swoole
+                  - generic [ref=e54]:
+                    - generic [ref=e55]:
+                      - img [ref=e56]
+                      - generic [ref=e58]: 4.1K
+                    - img [ref=e59]
+                    - button "595" [ref=e61] [cursor=pointer]:
+                      - img
+                      - generic [ref=e63]: "595"
+              - generic [ref=e64]:
+                - button "Flag Generation" [ref=e65] [cursor=pointer]:
+                  - img
+                - button [ref=e66] [cursor=pointer]:
+                  - img
+                - button "Open in" [ref=e68] [cursor=pointer]:
+                  - generic [ref=e70]:
+                    - text: Open in
+                    - img
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e75]:
+                - generic [ref=e77]:
+                  - img [ref=e79]
+                  - generic [ref=e82]:
+                    - generic [ref=e83]:
+                      - button [disabled] [ref=e84]:
+                        - img
+                      - button [disabled] [ref=e85]:
+                        - img
+                      - button [ref=e86] [cursor=pointer]:
+                        - img
+                    - textbox [ref=e87]
+                    - generic [ref=e88]:
+                      - button [ref=e89] [cursor=pointer]:
+                        - img
+                      - button [ref=e90] [cursor=pointer]:
+                        - img
+                - button [ref=e92] [cursor=pointer]:
+                  - img
+              - generic [ref=e97]:
+                - generic [ref=e98]:
+                  - heading "About" [level=2] [ref=e99]
+                  - paragraph [ref=e100]: "CmsFullForm Dashboard is a Admin Dashboard Tailwind Templates, open-source administration panel designed for developers and website owners who want a simple yet powerful way to manage content. Built entirely in Next.js & Tailwind CSS, it focuses on clarity, modularity, and extensibility, providing the essential features of a modern CMS without the heavy overhead or steep learning curve of larger platforms. About CmsFullForm OpenSource CMS: is about giving developers complete control over their projects while maintaining flexibility for customization. Instead of forcing users into a rigid structure, it embraces a modular approach: every feature, from post management to user roles, is organized in a clean and understandable way. This makes it easy for newcomers to learn and adapt, while experienced developers can extend functionality or integrate with existing applications effortlessly. The dashboard interface is designed with usability in mind. It offers a clean, responsive layout that adapts to desktop and mobile, making content management accessible anywhere. With intuitive navigation, clear separation of modules, and support for different post types, administrators can focus on creating and organizing content instead of dealing with technical complexity. Security and performance are also key considerations. CmsFullForm Dashboard provides role-based access control (RBAC), allowing administrators to define user permissions with precision. By isolating system configuration, user data, and public content, it creates a safer environment out of the box. The lightweight design reduces server load and ensures the panel runs smoothly even on modest infrastructure. As an open-source project, CmsFullForm Dashboard invites collaboration and community input. The goal is not to reinvent every aspect of a CMS, but to provide a clear and extensible foundation where developers can build the features they actually need. Whether you want to create a blog, a news portal, a portfolio site, or a more complex web application, CmsFullForm Dashboard gives you a starting point that is both practical and developer-friendly. In summary, CmsFullForm Dashboard stands as a simple, transparent, and flexible admin panel for PHP or Next.js projects. It lowers the barrier to entry for newcomers, saves time for experienced developers, and offers a foundation that can be extended in any direction. By focusing on modularity, performance, and openness, it aims to become a go-to tool for those who value control and clarity in their content management systems."
+                - generic [ref=e101]:
+                  - generic [ref=e102]:
+                    - heading "Tags" [level=2] [ref=e103]
+                    - generic [ref=e105]:
+                      - generic [ref=e106]: cms
+                      - generic [ref=e107]: saas
+                      - generic [ref=e108]: dashboard
+                      - generic [ref=e109]: cmsfullform
+                      - generic [ref=e110]: cms-full-form
+                      - generic [ref=e111]: php
+                      - generic [ref=e112]: open-source
+                  - generic [ref=e113]:
+                    - heading "Share" [level=2] [ref=e114]
+                    - generic [ref=e115]:
+                      - button [ref=e116] [cursor=pointer]:
+                        - img
+                      - button [ref=e117] [cursor=pointer]:
+                        - generic [ref=e120]:
+                          - img
+                      - button [ref=e121] [cursor=pointer]:
+                        - img
+                  - paragraph [ref=e123]: Last Updated August 22, 2025
+            - generic [ref=e125]:
+              - heading "More Templates Like This" [level=2] [ref=e126]
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - generic [ref=e131]:
+                    - link [ref=e132] [cursor=pointer]:
+                      - /url: /templates/SGGKgsJdrxG
+                    - link "View Details" [ref=e134] [cursor=pointer]:
+                      - /url: /templates/SGGKgsJdrxG
+                  - generic [ref=e135]:
+                    - link [ref=e136] [cursor=pointer]:
+                      - /url: /@jessin
+                    - link "Tasko - Modern Task Management Dashboard 1.3K 271" [ref=e138] [cursor=pointer]:
+                      - /url: /templates/SGGKgsJdrxG
+                      - generic [ref=e139]:
+                        - generic [ref=e140]: Tasko - Modern Task Management Dashboard
+                        - generic [ref=e141]:
+                          - generic [ref=e142]:
+                            - img
+                            - generic [ref=e143]: 1.3K
+                          - img
+                          - generic [ref=e144]:
+                            - img
+                            - generic [ref=e146]: "271"
+                - generic [ref=e147]:
+                  - generic [ref=e149]:
+                    - link [ref=e150] [cursor=pointer]:
+                      - /url: /templates/8OqrnMC1MlX
+                    - link "View Details" [ref=e152] [cursor=pointer]:
+                      - /url: /templates/8OqrnMC1MlX
+                  - generic [ref=e153]:
+                    - link [ref=e154] [cursor=pointer]:
+                      - /url: /@rajoninternet
+                    - link "Marketing Campaign Management 167 51" [ref=e156] [cursor=pointer]:
+                      - /url: /templates/8OqrnMC1MlX
+                      - generic [ref=e157]:
+                        - generic [ref=e158]: Marketing Campaign Management
+                        - generic [ref=e159]:
+                          - generic [ref=e160]:
+                            - img
+                            - generic [ref=e161]: "167"
+                          - img
+                          - generic [ref=e162]:
+                            - img
+                            - generic [ref=e164]: "51"
+                - generic [ref=e165]:
+                  - generic [ref=e167]:
+                    - link [ref=e168] [cursor=pointer]:
+                      - /url: /templates/wpeZSxe4nfK
+                    - link "View Details" [ref=e170] [cursor=pointer]:
+                      - /url: /templates/wpeZSxe4nfK
+                  - generic [ref=e171]:
+                    - link [ref=e172] [cursor=pointer]:
+                      - /url: /@jessin
+                    - link "CampaignHub - Marketing Campaign Management Platform 164 45" [ref=e174] [cursor=pointer]:
+                      - /url: /templates/wpeZSxe4nfK
+                      - generic [ref=e175]:
+                        - generic [ref=e176]: CampaignHub - Marketing Campaign Management Platform
+                        - generic [ref=e177]:
+                          - generic [ref=e178]:
+                            - img
+                            - generic [ref=e179]: "164"
+                          - img
+                          - generic [ref=e180]:
+                            - img
+                            - generic [ref=e182]: "45"
+        - contentinfo [ref=e184]:
+          - generic [ref=e186]:
+            - link "v0 logo" [ref=e187] [cursor=pointer]:
+              - /url: /
+              - img "v0 logo"
+            - generic [ref=e188]:
+              - generic [ref=e189]:
+                - heading "Product" [level=2] [ref=e190]
+                - list [ref=e191]:
+                  - listitem [ref=e192]:
+                    - link "Home" [ref=e193] [cursor=pointer]:
+                      - /url: /
+                  - listitem [ref=e194]:
+                    - link "Enterprise" [ref=e195] [cursor=pointer]:
+                      - /url: /enterprise
+                  - listitem [ref=e196]:
+                    - link "Pricing" [ref=e197] [cursor=pointer]:
+                      - /url: /pricing
+                  - listitem [ref=e198]:
+                    - link "v0 for Students" [ref=e199] [cursor=pointer]:
+                      - /url: /students
+              - generic [ref=e200]:
+                - heading "Company" [level=2] [ref=e201]
+                - list [ref=e202]:
+                  - listitem [ref=e203]:
+                    - link "Terms" [ref=e204] [cursor=pointer]:
+                      - /url: https://vercel.com/legal/terms
+                      - text: Terms
+                      - img
+                  - listitem [ref=e205]:
+                    - link "AI Policy" [ref=e206] [cursor=pointer]:
+                      - /url: /policy
+                  - listitem [ref=e207]:
+                    - link "Privacy" [ref=e208] [cursor=pointer]:
+                      - /url: https://vercel.com/legal/privacy-policy
+                      - text: Privacy
+                      - img
+                  - listitem [ref=e209]:
+                    - link "Cookies":
+                      - /url: ""
+              - generic [ref=e210]:
+                - heading "Resources" [level=2] [ref=e211]
+                - list [ref=e212]:
+                  - listitem [ref=e213]:
+                    - link "FAQs" [ref=e214] [cursor=pointer]:
+                      - /url: /faq
+                  - listitem [ref=e215]:
+                    - link "Docs" [ref=e216] [cursor=pointer]:
+                      - /url: /docs
+                  - listitem [ref=e217]:
+                    - link "Ambassadors" [ref=e218] [cursor=pointer]:
+                      - /url: /ambassador
+                  - listitem [ref=e219]:
+                    - link "Vercel Community" [ref=e220] [cursor=pointer]:
+                      - /url: https://community.vercel.com/c/v0/59
+                      - text: Vercel Community
+                      - img
+                  - listitem [ref=e221]:
+                    - link "Vercel" [ref=e222] [cursor=pointer]:
+                      - /url: https://vercel.com/?utm_source=v0-site&utm_medium=banner&utm_campaign=home
+                      - text: Vercel
+                      - img
+              - generic [ref=e223]:
+                - heading "Social" [level=2] [ref=e224]
+                - list [ref=e225]:
+                  - listitem [ref=e226]:
+                    - link "Twitter" [ref=e227] [cursor=pointer]:
+                      - /url: https://x.com/v0
+                      - img
+                      - text: Twitter
+                  - listitem [ref=e228]:
+                    - link "LinkedIn" [ref=e229] [cursor=pointer]:
+                      - /url: https://linkedin.com/company/vercel
+                      - img
+                      - text: LinkedIn
+  - alert [ref=e230]

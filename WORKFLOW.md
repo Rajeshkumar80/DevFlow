@@ -1,0 +1,726 @@
+# DevFlow — Architecture & Workflow
+
+## Table of Contents
+
+1. [System Architecture](#1-system-architecture)
+2. [User Flow & Navigation](#2-user-flow--navigation)
+3. [Authentication Flow](#3-authentication-flow)
+4. [Code Review Lifecycle](#4-code-review-lifecycle)
+5. [AI Analysis Pipeline](#5-ai-analysis-pipeline)
+6. [Real-Time Collaboration Flow](#6-real-time-collaboration-flow)
+7. [Notification System](#7-notification-system)
+8. [Data Flow Diagram](#8-data-flow-diagram)
+9. [Directory Structure](#9-directory-structure)
+10. [API Route Map](#10-api-route-map)
+
+---
+
+## 1. System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        CLIENT LAYER                                 │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │            React SPA (Vite · TypeScript)                     │   │
+│  │                                                              │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │   │
+│  │  │  Auth    │  │ Reviews  │  │Analysis  │  │ Learning │    │   │
+│  │  │  Pages   │  │   UI     │  │  Charts  │  │   Paths  │    │   │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │   │
+│  │                                                              │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │   │
+│  │  │  Pair    │  │Analytics │  │ Settings │  │  Common  │    │   │
+│  │  │Session   │  │   UI     │  │   Page   │  │Components│    │   │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │ HTTP REST + WebSocket
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        API GATEWAY                                   │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │          Express Server (TypeScript · Node.js)               │   │
+│  │                                                              │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │   │
+│  │  │   CORS   │  │   JWT    │  │   Rate   │  │  Error   │    │   │
+│  │  │  Middle  │  │   Auth   │  │  Limiter │  │ Handler  │    │   │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+              ┌──────────────┼──────────────────┐
+              ▼              ▼                   ▼
+┌─────────────────────┐ ┌─────────────┐ ┌────────────────────┐
+│   REST API Routes   │ │ Socket.IO   │ │   Bull Queue       │
+│                     │ │  Server     │ │   (Job Processor)  │
+│  /api/v1/auth/*     │ │             │ │                    │
+│  /api/v1/reviews/*  │ │ Realtime    │ │ Async code         │
+│  /api/v1/analytics/*│ │ Collab      │ │ analysis jobs      │
+│  /api/v1/notif/*    │ │ Events      │ │                    │
+└─────────┬───────────┘ └──────┬──────┘ └────────────────────┘
+          │                    │
+          ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      SERVICE LAYER                                  │
+│                                                                     │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│  │  Auth    │ │  Review  │ │ Comment  │ │Analysis  │ │Notificat │ │
+│  │ Service  │ │ Service  │ │ Service  │ │ Service  │ │ Service  │ │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐            │
+│  │  Repo    │ │   Diff   │ │  Issue   │ │Realtime  │            │
+│  │ Service  │ │ Service  │ │ Service  │ │ Service  │            │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘            │
+└──────────────────────┬───────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      DATA LAYER                                      │
+│                                                                     │
+│           ┌─────────────────────┐  ┌─────────────────────┐         │
+│           │   PostgreSQL 15     │  │     Redis 7         │         │
+│           │                     │  │                     │         │
+│           │ • users             │  │ • Bull queue jobs   │         │
+│           │ • code_reviews      │  │ • Session state     │         │
+│           │ • review_comments   │  │ • Socket.IO adapter │         │
+│           │ • code_issues       │  │ • Cache             │         │
+│           │ • notifications     │  │                     │         │
+│           │ • pair_sessions     │  └─────────────────────┘         │
+│           │ • team_analytics    │                                   │
+│           └─────────────────────┘                                   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. User Flow & Navigation
+
+```
+                    ┌──────────────────────┐
+                    │   User visits app    │
+                    │   localhost:3000     │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   Is Authenticated?  │◄──────────┐
+                    │   (JWT token check)  │           │
+                    └──────────┬───────────┘           │
+                               │                       │
+              ┌────────────────┼────────────────┐      │
+              ▼                ▼                │      │
+        ┌──────────┐    ┌──────────────┐       │      │
+        │   YES    │    │     NO       │       │      │
+        └────┬─────┘    └──────┬───────┘       │      │
+             │                 │               │      │
+             ▼                 ▼               │      │
+     ┌──────────────┐  ┌──────────────┐       │      │
+     │  Dashboard   │  │  Login Page  │───────┘      │
+     │              │  │              │              │
+     │  Show stats  │  │ Enter email  │              │
+     │  Activity    │  │ & password   │              │
+     │  Quick links │  └──────┬───────┘              │
+     └──────┬───────┘         │                      │
+            │                 ▼                      │
+            │         ┌──────────────┐               │
+            │         │  Register?   │───────────────┘
+            │         │  Create new  │
+            │         │  account     │
+            │         └──────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────┐
+│              SIDEBAR NAVIGATION                      │
+│                                                      │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────┐ │
+│  │Dashboard│  │Reviews  │  │Analytics│  │Learning│ │
+│  └────┬────┘  └────┬────┘  └────┬────┘  └───┬────┘ │
+│       │            │            │            │       │
+│       ▼            ▼            ▼            ▼       │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────┐ │
+│  │Activity │  │Review   │  │Team     │  │Skills  │ │
+│  │Stats    │  │Detail   │  │Metrics  │  │Paths   │ │
+│  │Quick    │  │Comments │  │Charts   │  │Progress│ │
+│  │Actions  │  │Issues   │  │Trends   │  │Tracking│ │
+│  └─────────┘  └─────────┘  └─────────┘  └────────┘ │
+│                                                      │
+│  ┌─────────┐  ┌─────────┐                            │
+│  │Settings │  │Pair     │                            │
+│  │Profile  │  │Session  │                            │
+│  │Prefs    │  │Live Code│                            │
+│  │Security │  │Chat     │                            │
+│  └─────────┘  └─────────┘                            │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Authentication Flow
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│  User    │     │ Frontend │     │ Backend  │     │  Mock DB │
+│ Browser  │     │  React   │     │ Express  │     │ (Memory) │
+└────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+     │                │                │                │
+     │  POST /register│                │                │
+     │  {email,pass,  │                │                │
+     │   username}    │                │                │
+     │───────────────>│  POST /api/v1  │                │
+     │                │  /auth/register│                │
+     │                │───────────────>│  bcrypt.hash() │
+     │                │                │────────────────>│
+     │                │                │  INSERT user    │
+     │                │                │<────────────────│
+     │                │  201 { user }  │                │
+     │  Redirect to   │<───────────────│                │
+     │  /login        │                │                │
+     │<───────────────│                │                │
+     │                │                │                │
+     │  POST /login   │                │                │
+     │  {email,pass}  │                │                │
+     │───────────────>│  POST /api/v1  │                │
+     │                │  /auth/login   │                │
+     │                │───────────────>│  Find user     │
+     │                │                │───────────────>│
+     │                │                │<───────────────│
+     │                │                │  bcrypt.compare│
+     │                │                │  JWT.sign()    │
+     │                │  200 { user,   │                │
+     │                │   accessToken, │                │
+     │                │   refreshToken}│                │
+     │                │<───────────────│                │
+     │  Store tokens  │                │                │
+     │  in Zustand    │                │                │
+     │  Redirect to   │                │                │
+     │  /dashboard    │                │                │
+     │<───────────────│                │                │
+     │                │                │                │
+     │  GET /reviews  │                │                │
+     │  (with Bearer  │                │                │
+     │   token)       │                │                │
+     │───────────────>│  JWT verify    │                │
+     │                │───────────────>│                │
+     │                │  Attach userId │                │
+     │                │  to request    │                │
+     │                │  200 data      │                │
+     │                │<───────────────│                │
+     │  Render UI     │                │                │
+     │<───────────────│                │                │
+     │                │                │                │
+     │  401 on expired│                │                │
+     │  token         │                │                │
+     │───────────────>│  Axios intercep│                │
+     │                │  tor catches   │                │
+     │                │  401           │                │
+     │                │───────────────>│                │
+     │                │  POST /refresh │                │
+     │                │  {refreshToken}│                │
+     │                │───────────────>│  JWT.verify()  │
+     │                │                │  Generate new  │
+     │                │                │  access token  │
+     │                │<───────────────│                │
+     │  Retry original│                │                │
+     │  request       │                │                │
+```
+
+---
+
+## 4. Code Review Lifecycle
+
+```
+                    ┌─────────────────────────┐
+                    │     CREATE REVIEW        │
+                    │  Developer submits PR    │
+                    │  via POST /reviews/:id   │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │      STATUS: DRAFT       │
+                    │  Initial state           │
+                    └────────────┬────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+          ┌─────────────────┐      ┌─────────────────────┐
+          │  Open for Review │      │  Continue Editing   │
+          │  PATCH status    │      │  (stays in draft)   │
+          │  → "open"        │      │                     │
+          └────────┬─────────┘      └─────────────────────┘
+                   │
+                   ▼
+          ┌─────────────────────────────────────────────┐
+          │          AI ANALYSIS TRIGGERED               │
+          │                                              │
+          │  1. POST /:reviewId/analyze                  │
+          │     { code, language, filePath }             │
+          │                                              │
+          │  2. AnalysisService.analyzeCode()            │
+          │                                              │
+          │  3. Local rules engine checks:               │
+          │     • Hardcoded secrets/passwords            │
+          │     • var usage vs const/let                 │
+          │     • console.log statements                 │
+          │     • Code length thresholds                 │
+          │     • (Optional) Claude AI API call          │
+          │                                              │
+          │  4. Issues created in code_issues table      │
+          │                                              │
+          │  5. AI score & complexity updated on review  │
+          └────────────────────┬────────────────────────┘
+                               │
+                               ▼
+          ┌─────────────────────────────────────────────┐
+          │          PEER REVIEW PHASE                   │
+          │                                              │
+          │  ┌─────────────────────┐                     │
+          │  │  Add Comments       │                     │
+          │  │  POST /:reviewId/   │                     │
+          │  │  comments           │                     │
+          │  │  {content, file,    │                     │
+          │  │   line, isSuggestion}│                    │
+          │  └─────────────────────┘                     │
+          │                                              │
+          │  ┌─────────────────────┐                     │
+          │  │  Resolve Threads    │                     │
+          │  │  PATCH /comments/   │                     │
+          │  │  :id/resolve        │                     │
+          │  └─────────────────────┘                     │
+          │                                              │
+          │  ┌─────────────────────┐                     │
+          │  │  View Issues        │                     │
+          │  │  GET /:reviewId/    │                     │
+          │  │  issues             │                     │
+          │  └─────────────────────┘                     │
+          └────────────────────┬────────────────────────┘
+                               │
+                               ▼
+          ┌─────────────────────────────────────────────┐
+          │              FINAL ACTION                    │
+          │                                              │
+          │  ┌──────────────┐  ┌──────────────────┐     │
+          │  │  APPROVE     │  │  CHANGES          │     │
+          │  │  PATCH status│  │  REQUESTED        │     │
+          │  │  → "approved"│  │  PATCH status      │     │
+          │  └──────┬───────┘  │  → "changes_      │     │
+          │         │          │    requested"      │     │
+          │         ▼          └────────┬───────────┘     │
+          │  ┌──────────────┐          │                  │
+          │  │  MERGED      │          │                  │
+          │  │  PATCH status│          ▼                  │
+          │  │  → "merged"  │  ┌──────────────────┐      │
+          │  │  merged_at   │  │  Developer makes  │     │
+          │  │  timestamp   │  │  changes &        │     │
+          │  │              │  │  re-opens         │     │
+          │  └──────────────┘  └──────────────────┘      │
+          └─────────────────────────────────────────────┘
+```
+
+---
+
+## 5. AI Analysis Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        ANALYSIS PIPELINE                                 │
+│                                                                         │
+│  User submits code for analysis                                         │
+│  POST /:reviewId/analyze                                                │
+│  { code: string, language: string, filePath: string }                   │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │
+                                ▼
+         ┌─────────────────────────────────────────────────────┐
+         │             CodeAnalysisService                      │
+         │                                                     │
+         │  1. RECEIVE CODE                                    │
+         │     • Truncate to 3000 chars                        │
+         │     • Detect language                                │
+         │                                                     │
+         │  2. RUN ANALYSIS RULES (Local Engine)               │
+         │                                                     │
+         │  ┌─────────────────────────────────────────────┐    │
+         │  │ Rule                 │ Severity  │ Detects  │    │
+         │  ├─────────────────────────────────────────────┤    │
+         │  │ password/secret      │ CRITICAL  │ Security │    │
+         │  │ in source code       │           │ Risk     │    │
+         │  ├─────────────────────────────────────────────┤    │
+         │  │ var keyword usage    │ MEDIUM    │ Code     │    │
+         │  │                      │           │ Style    │    │
+         │  ├─────────────────────────────────────────────┤    │
+         │  │ console.log          │ LOW       │ Debug    │    │
+         │  │ statements           │           │ Leftovers│    │
+         │  ├─────────────────────────────────────────────┤    │
+         │  │ Code > 500 chars     │ MEDIUM    │ Perf     │    │
+         │  │ per function         │           │ Risk     │    │
+         │  └─────────────────────────────────────────────┘    │
+         │                                                     │
+         │  3. (OPTIONAL) Claude API Call                      │
+         │     If ANTHROPIC_API_KEY is set:                    │
+         │     • Send code to Claude 3.5 Sonnet                │
+         │     • Parse JSON response                           │
+         │     • Use AI results over local rules               │
+         │                                                     │
+         │  4. PERSIST ISSUES                                  │
+         │     • For each issue found:                         │
+         │       IssueService.createIssue()                   │
+         │       → INSERT into code_issues                    │
+         │                                                     │
+         │  5. UPDATE REVIEW SCORE                             │
+         │     • Calculate overallScore 1-5                   │
+         │     • UPDATE code_reviews SET ai_score              │
+         │                                                     │
+         │  6. RETURN RESULT                                   │
+         │     { issues[], overallScore, summary }              │
+         └─────────────────────────────────────────────────────┘
+                                │
+                                ▼
+         ┌─────────────────────────────────────────────────────┐
+         │                  RESPONSE                            │
+         │                                                     │
+         │  {                                                   │
+         │    "issues": [                                       │
+         │      {                                               │
+         │        "type": "security",                           │
+         │        "severity": "critical",                       │
+         │        "line": 23,                                   │
+         │        "description": "Password hardcoded",          │
+         │        "suggestion": "Use env variables"             │
+         │      }                                               │
+         │    ],                                                │
+         │    "overallScore": 3.5,                              │
+         │    "summary": "Found 3 issues"                       │
+         │  }                                                   │
+         └─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Real-Time Collaboration Flow
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                      SOCKET.IO EVENT MAP                                  │
+│                                                                           │
+│  ┌──────────────┐                ┌──────────────┐                         │
+│  │  USER A      │                │  USER B      │                         │
+│  │  (Browser)   │                │  (Browser)   │                         │
+│  └──────┬───────┘                └──────┬───────┘                         │
+│         │                              │                                  │
+│         │  connect(token)              │                                  │
+│         │──────────────────────────────│─────────────────────────────────│
+│         │                              │                                  │
+│         │  emit("review:join", id)     │                                  │
+│         │──────────────────────────────│─────────────────────────────────│
+│         │         ┌──────────────────────────────────┐                   │
+│         │         │  Server joins socket to room     │                   │
+│         │         │  "review:<reviewId>"              │                   │
+│         │         └──────────────────────────────────┘                   │
+│         │                              │                                  │
+│         │  emit("review:code:change",  │                                  │
+│         │   { reviewId, content })     │                                  │
+│         │─────────────────────────────>│                                  │
+│         │                              │  on("review:code:change")        │
+│         │                              │  User B sees live update        │
+│         │                              │                                  │
+│         │  emit("review:comment:add",  │                                  │
+│         │   { reviewId, comment })     │                                  │
+│         │─────────────────────────────>│  on("review:comment:add")        │
+│         │                              │  Comment appears in realtime    │
+│         │                              │                                  │
+│         │  PAIR SESSION EVENTS         │                                  │
+│         │                              │                                  │
+│         │  emit("session:join", id)    │                                  │
+│         │──────────────────────────────│─────────────────────────────────│
+│         │                              │                                  │
+│         │  emit("session:code:change") │                                  │
+│         │  emit("session:cursor:move") │                                  │
+│         │  emit("session:chat:message")│                                  │
+│         │  emit("session:terminal:     │                                  │
+│         │        output")              │                                  │
+│         │──────────────────────────────│─────────────────────────────────│
+│         │                              │                                  │
+│         │  disconnect()                │                                  │
+│         │──────────────────────────────│─────────────────────────────────│
+│         │                              │                                  │
+└───────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                  PAIR SESSION ARCHITECTURE                                │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐     │
+│  │                     SOCKET.IO SERVER                              │     │
+│  │                                                                   │     │
+│  │  Room: "session:abc123"   Room: "review:review-1"                │     │
+│  │  ┌────────────┐          ┌────────────┐                          │     │
+│  │  │ Socket A   │          │ Socket C   │                          │     │
+│  │  │ User A     │          │ User C     │                          │     │
+│  │  ├────────────┤          ├────────────┤                          │     │
+│  │  │ Socket B   │          │ Socket D   │                          │     │
+│  │  │ User B     │          │ User D     │                          │     │
+│  │  └────────────┘          └────────────┘                          │     │
+│  └─────────────────────────────────────────────────────────────────┘     │
+│                                                                           │
+│  ┌─────────────┐         ┌─────────────┐                                 │
+│  │  USER A     │         │  USER B     │                                 │
+│  │             │         │             │                                 │
+│  │  ┌───────┐  │         │  ┌───────┐  │                                 │
+│  │  │ Code  │  │◄═══════►│  │ Code  │  │  Real-time sync'd editor       │
+│  │  │Editor │  │  Sync   │  │Editor │  │                                 │
+│  │  └───────┘  │         │  └───────┘  │                                 │
+│  │             │         │             │                                 │
+│  │  ┌───────┐  │         │  ┌───────┐  │                                 │
+│  │  │ Chat  │  │◄═══════►│  │ Chat  │  │  Real-time messaging           │
+│  │  └───────┘  │         │  └───────┘  │                                 │
+│  │             │         │             │                                 │
+│  │  ┌───────┐  │         │  ┌───────┐  │                                 │
+│  │  │Cursor │  │◄═══════►│  │Cursor │  │  Live cursor tracking          │
+│  │  └───────┘  │         │  └───────┘  │                                 │
+│  │             │         │             │                                 │
+│  │  ┌───────┐  │         │  ┌───────┐  │                                 │
+│  │  │Termnl │  │◄═══════►│  │Termnl │  │  Shared terminal output        │
+│  │  └───────┘  │         │  └───────┘  │                                 │
+│  └─────────────┘         └─────────────┘                                 │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Notification System
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                     NOTIFICATION SYSTEM FLOW                              │
+│                                                                          │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                  │
+│  │  Event      │    │ Notification│    │  User       │                  │
+│  │  Trigger    │───>│  Service    │───>│  Interface  │                  │
+│  └─────────────┘    └─────────────┘    └─────────────┘                  │
+│                                                                          │
+│  Events that trigger notifications:                                     │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Event               │ Type                │ Trigger              │   │
+│  ├──────────────────────────────────────────────────────────────────┤   │
+│  │  New review assigned │ "review_assigned"   │ admin assigns review │   │
+│  │  Comment added       │ "comment_reply"     │ someone comments     │   │
+│  │  Status changed      │ "status_change"     │ review status update │   │
+│  │  Learning recommend  │ "learning_          │ AI generates path    │   │
+│  │                      │ recommended"        │                      │   │
+│  │  Achievement         │ "achievement_       │ milestone reached    │   │
+│  │  unlocked            │ unlocked"           │                      │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  API Endpoints:                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Method │ Path                      │ Description                │   │
+│  ├──────────────────────────────────────────────────────────────────┤   │
+│  │  GET    │ /notifications            │ List with pagination       │   │
+│  │  PATCH  │ /notifications/:id/read   │ Mark single as read        │   │
+│  │  PATCH  │ /notifications/read-all   │ Mark all as read           │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 8. Data Flow Diagram
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      COMPLETE DATA FLOW                                   │
+│                                                                          │
+│                                                                          │
+│  ┌─────────┐    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐ │
+│  │ Browser │    │   React App │    │  Express API  │    │  Data Store │ │
+│  │         │    │             │    │               │    │             │ │
+│  │ UI      │◄──►│ • Zustand   │◄──►│ • Routes      │◄──►│ • Mock DB   │ │
+│  │ Render  │    │   Stores    │    │ • Services    │    │   (Memory)  │ │
+│  │         │    │ • React     │    │ • Middleware   │    │             │ │
+│  │         │    │   Query     │    │ • Socket.IO   │    │             │ │
+│  │         │    │ • Axios     │    │   Server      │    │             │ │
+│  │         │    │ • Socket.IO │    │               │    │             │ │
+│  │         │    │   Client    │    │               │    │             │ │
+│  └─────────┘    └─────────────┘    └──────────────┘    └─────────────┘ │
+│                                                                          │
+│                                                                          │
+│  STEP-BY-STEP DATA FLOW FOR A TYPICAL REQUEST:                          │
+│                                                                          │
+│  1. User clicks "View Reviews"                                          │
+│  2. React Router navigates to /reviews/:repoId                          │
+│  3. Component mounts → calls reviewApi.listReviews()                    │
+│  4. Axios interceptor attaches Bearer token                             │
+│  5. GET /api/v1/reviews/:repoId sent to Express                         │
+│  6. Express routes to createReviewRouter                                │
+│  7. AuthMiddleware verifies JWT token                                    │
+│  8. ReviewService.listReviews() queried                                 │
+│  9. Data fetched from mock DB (or PostgreSQL)                            │
+│  10. Response returned as JSON                                           │
+│  11. Component receives data → updates Zustand store                    │
+│  12. React re-renders with review list                                   │
+│  13. User sees the reviews                                               │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 9. Directory Structure
+
+```
+DevFlow/
+├── backend/
+│   ├── src/
+│   │   ├── db/
+│   │   │   ├── schema.sql          # PostgreSQL schema (11 tables)
+│   │   │   ├── migrate.ts          # Migration runner
+│   │   │   └── seed.ts             # Sample data seeder
+│   │   ├── middleware/
+│   │   │   ├── auth.ts             # JWT verification middleware
+│   │   │   └── errorHandler.ts     # Global error handler
+│   │   ├── routes/
+│   │   │   ├── auth.ts             # POST /register, /login, /refresh
+│   │   │   ├── reviews.ts          # CRUD for code reviews
+│   │   │   ├── comments.ts         # Comments & threads
+│   │   │   ├── analysis.ts         # AI analysis endpoints
+│   │   │   ├── notifications.ts    # Notification CRUD
+│   │   │   ├── analytics.ts        # Team & developer stats
+│   │   │   └── repositories.ts     # Repository management
+│   │   ├── services/
+│   │   │   ├── AuthService.ts      # Register, login, JWT tokens
+│   │   │   ├── ReviewService.ts    # Review CRUD operations
+│   │   │   ├── CommentService.ts   # Comments & resolutions
+│   │   │   ├── CodeAnalysisService.ts  # AI & local analysis
+│   │   │   ├── AnalysisQueue.ts    # Async job queue
+│   │   │   ├── IssueService.ts     # Code issue tracking
+│   │   │   ├── NotificationService.ts  # Notification CRUD
+│   │   │   ├── RealtimeService.ts  # Socket.IO event handling
+│   │   │   ├── RepositoryService.ts  # Repo CRUD
+│   │   │   └── DiffService.ts      # Git diff computation
+│   │   ├── types/
+│   │   │   └── index.ts            # All TypeScript interfaces
+│   │   ├── utils/
+│   │   │   └── logger.ts           # Winston logger
+│   │   ├── tests/
+│   │   │   └── auth.test.ts        # Auth integration tests
+│   │   └── index.ts                # App entry point
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── jest.config.js
+│   └── .env
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── auth/
+│   │   │   │   ├── LoginPage.tsx       # Sign in form
+│   │   │   │   └── RegisterPage.tsx    # Sign up form
+│   │   │   ├── common/
+│   │   │   │   ├── Sidebar.tsx         # Navigation sidebar
+│   │   │   │   ├── Header.tsx          # Top bar with search
+│   │   │   │   ├── LoadingSpinner.tsx  # Loading indicator
+│   │   │   │   ├── NotificationBell.tsx # Notification dropdown
+│   │   │   │   └── StatusBadge.tsx     # Status pills
+│   │   │   ├── dashboard/
+│   │   │   │   └── DashboardPage.tsx   # Home with stats
+│   │   │   ├── review/
+│   │   │   │   └── ReviewDetailPage.tsx # Review with comments
+│   │   │   ├── pair/
+│   │   │   │   └── PairSessionPage.tsx  # Live pair coding
+│   │   │   ├── analytics/
+│   │   │   │   └── AnalyticsPage.tsx    # Charts & metrics
+│   │   │   ├── learning/
+│   │   │   │   └── LearningPage.tsx     # Skills & paths
+│   │   │   └── settings/
+│   │   │       └── SettingsPage.tsx     # User preferences
+│   │   ├── services/
+│   │   │   ├── api.ts               # Axios instance + interceptors
+│   │   │   ├── authApi.ts           # Auth API calls
+│   │   │   ├── reviewApi.ts         # Review & comment API
+│   │   │   ├── analysisApi.ts       # Analysis API calls
+│   │   │   ├── notificationApi.ts   # Notification API calls
+│   │   │   └── socket.ts            # Socket.IO client helpers
+│   │   ├── store/
+│   │   │   ├── authStore.ts         # User auth state (Zustand)
+│   │   │   ├── reviewStore.ts       # Review state (Zustand)
+│   │   │   └── notificationStore.ts # Notification state (Zustand)
+│   │   ├── types/
+│   │   │   └── index.ts             # Shared TypeScript types
+│   │   ├── styles/
+│   │   │   └── index.css            # Tailwind CSS + custom
+│   │   ├── App.tsx                  # Router + layout
+│   │   └── main.tsx                 # App entry + providers
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── tsconfig.json
+│   └── package.json
+├── docs/                            # Additional docs
+├── docker-compose.yml               # PostgreSQL + Redis
+├── DEVFLOW_PRD.md                   # Product requirements
+├── DEVFLOW_EXECUTION_GUIDE.md       # Implementation guide
+├── README.md                        # Project overview
+└── WORKFLOW.md                      # This file
+```
+
+---
+
+## 10. API Route Map
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                             COMPLETE API ROUTE MAP                                 │
+├────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  AUTH                                REVIEWS                                       │
+│  ──────                              ───────                                       │
+│  POST   /api/v1/auth/register        POST   /api/v1/reviews/:repoId                │
+│  POST   /api/v1/auth/login           GET    /api/v1/reviews/:repoId                │
+│  POST   /api/v1/auth/refresh         GET    /api/v1/reviews/:repoId/:reviewId      │
+│  POST   /api/v1/auth/logout          PATCH  /api/v1/reviews/:repoId/:reviewId      │
+│                                       PATCH  /api/v1/reviews/:repoId/:reviewId/    │
+│  COMMENTS                                    status                                 │
+│  ───────                              DELETE /api/v1/reviews/:repoId/:reviewId      │
+│  POST   /:reviewId/comments                                                     │
+│  GET    /:reviewId/comments           ANALYSIS                                     │
+│  PATCH  /:reviewId/comments/:id/      ────────                                    │
+│         resolve                       POST   /:reviewId/analyze                   │
+│  DELETE /:reviewId/comments/:id       POST   /:reviewId/batch-analyze             │
+│                                        GET    /:reviewId/batch-analyze/:jobId     │
+│  NOTIFICATIONS                        POST   /:reviewId/suggestions               │
+│  ─────────────                        GET    /:reviewId/issues                    │
+│  GET    /api/v1/notifications         PATCH  /:reviewId/issues/:issueId           │
+│  PATCH  /api/v1/notifications/:id/                                                │
+│         read                          ANALYTICS                                    │
+│  PATCH  /api/v1/notifications/        ─────────                                    │
+│         read-all                      GET    /api/v1/analytics/team/:teamId        │
+│                                        GET    /api/v1/analytics/developer/:userId  │
+│  REPOSITORIES                         GET    /api/v1/analytics/repository/:repoId  │
+│  ────────────                                                                     │
+│  POST   /api/v1/repositories          HEALTH                                       │
+│  GET    /api/v1/repositories/:orgId   ──────                                       │
+│  GET    /api/v1/repositories/single/  GET    /health                               │
+│         :repoId                                                                   │
+└────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Summary
+
+| Component | Technology | Purpose |
+|---|---|---|
+| **Frontend** | React 18 + Vite + Tailwind CSS | SPA with 6 pages, real-time updates |
+| **State** | Zustand + React Query | Client-side state & server cache |
+| **Styling** | Tailwind CSS + CSS modules | Dark theme, glassmorphism, gradients |
+| **Charts** | Recharts | Interactive analytics charts |
+| **Backend** | Express + TypeScript | REST API + Socket.IO server |
+| **Auth** | JWT (access + refresh tokens) | Stateless authentication |
+| **Real-time** | Socket.IO | Live pair coding, chat, notifications |
+| **Analytics** | Local rules + Claude AI | Code quality analysis |
+| **Jobs** | Bull queue (Redis) | Async batch analysis |
+| **Storage** | PostgreSQL / In-memory mock | Data persistence |
+
+> The backend runs with an in-memory mock database by default for quick evaluation. Switch to PostgreSQL by setting `DATABASE_URL` in `.env` and running the migration.
