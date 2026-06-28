@@ -30,10 +30,6 @@ export function createAuthRouter(db: any) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      if (password.length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters' });
-      }
-
       const user = await authService.register(email, username, password, full_name);
       res.status(201).json({ user });
     } catch (err: any) {
@@ -74,8 +70,16 @@ export function createAuthRouter(db: any) {
     }
   });
 
-  router.post('/logout', (req: Request, res: Response) => {
-    res.status(200).json({ message: 'Logged out successfully' });
+  router.post('/logout', async (req: Request, res: Response) => {
+    try {
+      const { refreshToken } = req.body;
+      if (refreshToken) {
+        AuthService.blacklistToken(refreshToken);
+      }
+      res.status(200).json({ message: 'Logged out successfully' });
+    } catch {
+      res.status(200).json({ message: 'Logged out successfully' });
+    }
   });
 
   return router;

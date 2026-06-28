@@ -58,34 +58,37 @@ export function createReviewRouter(db: any) {
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: 'Invalid status' });
       }
-      const review = await reviewService.updateReviewStatus(req.params.reviewId, status);
+      const review = await reviewService.updateReviewStatus(req.params.reviewId, status, req.userId!);
       if (!review) {
         return res.status(404).json({ error: 'Review not found' });
       }
       res.json(review);
     } catch (err: any) {
-      res.status(400).json({ error: err.message });
+      const status = err.message.includes('Not authorized') ? 403 : 400;
+      res.status(status).json({ error: err.message });
     }
   });
 
   router.patch('/:repoId/:reviewId', authMiddleware(db), async (req: Request, res: Response) => {
     try {
-      const review = await reviewService.updateReview(req.params.reviewId, req.body);
+      const review = await reviewService.updateReview(req.params.reviewId, req.body, req.userId!);
       if (!review) {
         return res.status(404).json({ error: 'Review not found' });
       }
       res.json(review);
     } catch (err: any) {
-      res.status(400).json({ error: err.message });
+      const status = err.message.includes('Not authorized') ? 403 : 400;
+      res.status(status).json({ error: err.message });
     }
   });
 
   router.delete('/:repoId/:reviewId', authMiddleware(db), async (req: Request, res: Response) => {
     try {
-      await reviewService.deleteReview(req.params.reviewId);
+      await reviewService.deleteReview(req.params.reviewId, req.userId!);
       res.status(204).send();
     } catch (err: any) {
-      res.status(400).json({ error: err.message });
+      const status = err.message.includes('Not authorized') ? 403 : 400;
+      res.status(status).json({ error: err.message });
     }
   });
 

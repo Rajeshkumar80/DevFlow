@@ -87,8 +87,19 @@ const mockDb: any = {
   sessions: [] as any[]
 };
 
-app.use(express.json({ limit: '10mb' }));
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000', credentials: true }));
+app.use(express.json({ limit: '2mb' }));
+
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',');
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });

@@ -3,15 +3,32 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../db/prisma';
 import { User, JWTPayload, LoginResponse } from '../types';
 
+const blacklistedTokens = new Set<string>();
+
 export class AuthService {
   constructor(_db?: any) {}
+
+  static isBlacklisted(token: string): boolean {
+    return blacklistedTokens.has(token);
+  }
+
+  static blacklistToken(token: string): void {
+    blacklistedTokens.add(token);
+  }
 
   async register(
     email: string,
     username: string,
     password: string,
     fullName?: string
-  ): Promise<User> {
+  ): Promise<any> {
+    if (!this.isValidEmail(email)) {
+      throw new Error('Invalid email format');
+    }
+    if (!this.isStrongPassword(password)) {
+      throw new Error('Password must be at least 8 characters with uppercase, lowercase, and number');
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -22,8 +39,19 @@ export class AuthService {
         full_name: fullName || null,
         role: 'contributor',
       },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        full_name: true,
+        avatar_url: true,
+        role: true,
+        is_active: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
-    return user as any;
+    return user;
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
@@ -68,22 +96,23 @@ export class AuthService {
 
   generateRefreshToken(user: any): string {
     return jwt.sign(
-      { userId: user.id },
+      { userId: user.id, type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '30d' }
     );
   }
 
   verifyToken(token: string): JWTPayload {
-    return jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'devflow-super-secret-key'
-    ) as JWTPayload;
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) throw new Error('JWT_SECRET not configured');
+    return jwt.verify(token, JWT_SECRET) as JWTPayload;
   }
 
   async refreshAccessToken(refreshToken: string): Promise<string> {
     try {
+      if (AuthService.isBlacklisted(refreshToken)) throw new Error('Token revoked');
       const decoded = this.verifyToken(refreshToken);
+      if ((decoded as any).type !== 'refresh') throw new Error('Invalid token type');
       const user = await prisma.user.findFirst({
         where: { id: decoded.userId, is_active: true },
       });
@@ -92,5 +121,16 @@ export class AuthService {
     } catch {
       throw new Error('Invalid refresh token');
     }
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private isStrongPassword(password: string): boolean {
+    return password.length >= 8
+      && /[A-Z]/.test(password)
+      && /[a-z]/.test(password)
+      && /[0-9]/.test(password);
   }
 }

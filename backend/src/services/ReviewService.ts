@@ -2,6 +2,8 @@ import { prisma } from '../db/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { CodeReview } from '../types';
 
+const ALLOWED_UPDATE_FIELDS = ['title', 'description', 'branchName', 'priority', 'status'];
+
 export class ReviewService {
   async createReview(
     repoId: string,
@@ -17,7 +19,6 @@ export class ReviewService {
       ? codeFiles.reduce((sum, f) => sum + f.content.split('\n').length, 0)
       : 0;
 
-    // Ensure repo exists (create a stub if needed)
     await prisma.repository.upsert({
       where: { id: repoId },
       create: { id: repoId, name: repoId, owner_id: authorId },
@@ -79,10 +80,18 @@ export class ReviewService {
     });
   }
 
+  async checkOwnership(reviewId: string, userId: string): Promise<boolean> {
+    const review = await prisma.review.findUnique({ where: { id: reviewId } });
+    return review?.author_id === userId;
+  }
+
   async updateReviewStatus(
     reviewId: string,
-    status: string
+    status: string,
+    userId: string
   ): Promise<any | null> {
+    const owned = await this.checkOwnership(reviewId, userId);
+    if (!owned) throw new Error('Not authorized to modify this review');
     try {
       return await prisma.review.update({
         where: { id: reviewId },
@@ -96,18 +105,29 @@ export class ReviewService {
     }
   }
 
-  async updateReview(reviewId: string, data: any): Promise<any | null> {
+  async updateReview(reviewId: string, data: any, userId: string): Promise<any | null> {
+    const owned = await this.checkOwnership(reviewId, userId);
+    if (!owned) throw new Error('Not authorized to modify this review');
+
+    const safeData: any = {};
+    for (const key of ALLOWED_UPDATE_FIELDS) {
+      if (data[key] !== undefined) safeData[key] = data[key];
+    }
+    safeData.updated_at = new Date();
+
     try {
       return await prisma.review.update({
         where: { id: reviewId },
-        data: { ...data, updated_at: new Date() },
+        data: safeData,
       });
     } catch {
       return null;
     }
   }
 
-  async deleteReview(reviewId: string): Promise<void> {
+  async deleteReview(reviewId: string, userId: string): Promise<void> {
+    const owned = await this.checkOwnership(reviewId, userId);
+    if (!owned) throw new Error('Not authorized to delete this review');
     await prisma.review.delete({ where: { id: reviewId } });
   }
 }

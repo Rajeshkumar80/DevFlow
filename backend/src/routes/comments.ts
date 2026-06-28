@@ -1,9 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { CommentService } from '../services/CommentService';
-import { Pool } from 'pg';
 import { authMiddleware } from '../middleware/auth';
 
-export function createCommentRouter(db: Pool) {
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+export function createCommentRouter(db?: any) {
   const router = Router();
   const commentService = new CommentService(db);
 
@@ -15,14 +23,16 @@ export function createCommentRouter(db: Pool) {
         return res.status(400).json({ error: 'Comment content is required' });
       }
 
+      const sanitizedContent = escapeHtml(content);
+
       const comment = await commentService.addComment(
         req.params.reviewId,
         req.userId!,
         filePath || '',
         lineNumber || 0,
-        content,
+        sanitizedContent,
         isSuggestion || false,
-        suggestionText,
+        suggestionText ? escapeHtml(suggestionText) : undefined,
         threadId
       );
       res.status(201).json(comment);
