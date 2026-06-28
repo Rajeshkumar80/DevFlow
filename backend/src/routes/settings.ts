@@ -24,16 +24,26 @@ router.post('/', async (req: Request, res: Response) => {
     const { apiKey, model } = req.body;
 
     if (apiKey !== undefined) {
-      if (apiKey && !apiKey.startsWith('sk-or-')) {
-        return res.status(400).json({ error: 'Invalid OpenRouter API key format' });
-      }
       if (apiKey) {
-        const { OpenRouterService } = await import('../services/OpenRouterService');
-        await OpenRouterService.setApiKey(apiKey);
+        if (!apiKey.startsWith('sk-or-')) {
+          return res.status(400).json({ error: 'Invalid OpenRouter API key format. Must start with sk-or-' });
+        }
+        if (apiKey.length < 20 || apiKey.length > 200) {
+          return res.status(400).json({ error: 'Invalid API key length' });
+        }
+        if (/\s/.test(apiKey)) {
+          return res.status(400).json({ error: 'API key must not contain spaces' });
+        }
       }
+      const { OpenRouterService } = await import('../services/OpenRouterService');
+      await OpenRouterService.setApiKey(apiKey);
     }
 
     if (model) {
+      const allowedModels = ['google/gemini-2.0-flash-001', 'openai/gpt-4o-mini', 'anthropic/claude-3.5-haiku', 'meta-llama/llama-3.1-8b-instruct'];
+      if (!allowedModels.includes(model)) {
+        return res.status(400).json({ error: 'Invalid model selection' });
+      }
       const { OpenRouterService } = await import('../services/OpenRouterService');
       await OpenRouterService.setModel(model);
     }

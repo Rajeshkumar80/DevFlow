@@ -1,12 +1,28 @@
 import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/AuthService';
-import { Pool } from 'pg';
+import rateLimit from 'express-rate-limit';
 
-export function createAuthRouter(db: Pool) {
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Too many login attempts. Try again in 1 minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  message: { error: 'Too many registration attempts. Try again in 1 minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export function createAuthRouter(db: any) {
   const router = Router();
   const authService = new AuthService(db);
 
-  router.post('/register', async (req: Request, res: Response) => {
+  router.post('/register', registerLimiter, async (req: Request, res: Response) => {
     try {
       const { email, username, password, full_name } = req.body;
 
@@ -28,7 +44,7 @@ export function createAuthRouter(db: Pool) {
     }
   });
 
-  router.post('/login', async (req: Request, res: Response) => {
+  router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
 

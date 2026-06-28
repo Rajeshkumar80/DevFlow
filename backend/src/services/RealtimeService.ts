@@ -33,7 +33,7 @@ export class RealtimeService {
         if (token) {
           const decoded = jwt.verify(
             token,
-            process.env.JWT_SECRET || 'devflow-super-secret-key'
+            process.env.JWT_SECRET!
           ) as any;
           this.users.set(socket.id, { userId: decoded.userId, socketId: socket.id });
         }

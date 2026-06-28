@@ -20,10 +20,11 @@ export const authMiddleware = (db: any) => {
     }
 
     try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || 'devflow-super-secret-key'
-      ) as JWTPayload;
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET) {
+        return res.status(500).json({ error: 'Server misconfigured: JWT_SECRET missing' });
+      }
+      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
       req.user = decoded;
       req.userId = decoded.userId;
       next();
@@ -42,10 +43,9 @@ export const optionalAuthMiddleware = (db: any) => {
     }
 
     try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || 'devflow-super-secret-key'
-      ) as JWTPayload;
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET) return next();
+      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
       req.user = decoded;
       req.userId = decoded.userId;
     } catch (err) {

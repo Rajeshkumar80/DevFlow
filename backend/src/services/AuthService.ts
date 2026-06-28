@@ -61,7 +61,7 @@ export class AuthService {
   generateAccessToken(user: any): string {
     return jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'devflow-super-secret-key',
+      process.env.JWT_SECRET!,
       { expiresIn: '1h' }
     );
   }
@@ -69,7 +69,7 @@ export class AuthService {
   generateRefreshToken(user: any): string {
     return jwt.sign(
       { userId: user.id },
-      process.env.JWT_SECRET || 'devflow-super-secret-key',
+      process.env.JWT_SECRET!,
       { expiresIn: '30d' }
     );
   }
