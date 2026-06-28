@@ -27,7 +27,6 @@ const ApiKeysTab = () => {
   const [apiKey, setApiKey] = useState('');
   const [maskedKey, setMaskedKey] = useState('');
   const [hasKey, setHasKey] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-001');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +38,6 @@ const ApiKeysTab = () => {
         const res = await api.get('/settings');
         setMaskedKey(res.data.apiKey || '');
         setHasKey(res.data.hasApiKey);
-        setSelectedModel(res.data.model || 'google/gemini-2.0-flash-001');
       } catch {}
       setLoading(false);
     };
@@ -51,7 +49,6 @@ const ApiKeysTab = () => {
     try {
       const body: any = {};
       if (apiKey) body.apiKey = apiKey;
-      if (selectedModel) body.model = selectedModel;
       await api.post('/settings', body);
       setHasKey(true);
       if (apiKey) setMaskedKey('••••••••' + apiKey.slice(-6));
@@ -62,13 +59,6 @@ const ApiKeysTab = () => {
       setError(err.response?.data?.error || 'Failed to save');
     } finally { setSaving(false); }
   };
-
-  const models = [
-    { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash', provider: 'Google', tag: 'New' },
-    { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', tag: 'Fast' },
-    { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku', provider: 'Anthropic', tag: 'Smart' },
-    { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', provider: 'Meta', tag: 'Open' },
-  ];
 
   if (loading) return <div className="flex items-center gap-2 text-gray-400"><Loader2 size={16} className="animate-spin" /> Loading...</div>;
 
@@ -112,28 +102,6 @@ const ApiKeysTab = () => {
           />
         </div>
         <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1"><Shield size={11} /> Stored securely on the server. Never exposed to the browser.</p>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Select AI Model:</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {models.map((model) => (
-            <button
-              key={model.id}
-              onClick={() => setSelectedModel(model.id)}
-              className={`flex items-center justify-between p-2.5 rounded-btn border transition-all ${selectedModel === model.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 dark:border-primary-500' : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface hover:bg-gray-100 dark:hover:bg-dark-hover'}`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${selectedModel === model.id ? 'bg-primary-500' : 'bg-emerald-500'}`} />
-                <div>
-                  <p className="text-xs font-medium text-gray-900 dark:text-white">{model.name}</p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">{model.provider}</p>
-                </div>
-              </div>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">{model.tag}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {error && (

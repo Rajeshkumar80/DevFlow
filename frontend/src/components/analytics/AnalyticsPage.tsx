@@ -1,180 +1,121 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, AlertTriangle, Bug, Shield, Zap, Clock, FileCode, ChevronDown, ChevronRight, Activity, Layers, Target, GitCommit, RefreshCw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { BarChart3, AlertTriangle, Bug, Shield, Zap, Clock, FileCode, ChevronDown, ChevronRight, Layers, Target, GitCommit, RefreshCw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { analysisApi } from '../../services/analysisApi';
 
-const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const GitHubHeatmap = () => {
-  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-
-  const today = new Date();
-  const endDate = new Date(today);
-  endDate.setDate(endDate.getDate() + (6 - today.getDay()));
-
-  const startDate = new Date(endDate);
-  startDate.setDate(startDate.getDate() - 364);
-
-  const grid: { date: Date; count: number; row: number; col: number }[][] = [];
-  let totalContributions = 0;
-  let current = new Date(startDate);
+const PulseCalendar = () => {
+  const [hovered, setHovered] = useState<{ month: number; day: number } | null>(null);
+  const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
 
   const seededRandom = (seed: number) => {
     let x = Math.sin(seed) * 10000;
     return x - Math.floor(x);
   };
 
-  for (let week = 0; week < 53; week++) {
-    const weekCol: { date: Date; count: number; row: number; col: number }[] = [];
-    for (let day = 0; day < 7; day++) {
-      if (current > endDate) {
-        weekCol.push({ date: new Date(current), count: -1, row: day, col: week });
-      } else {
-        const dayOfYear = Math.floor((current.getTime() - startDate.getTime()) / 86400000);
-        const dayOfWeek = current.getDay();
-        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-        const month = current.getMonth();
+  const today = new Date();
+  const calendarData: { month: number; day: number; count: number; date: Date }[][] = [];
 
-        const holidayBoost = (month === 11 && current.getDate() >= 20) || (month === 0 && current.getDate() <= 5) ? 0.3 : 0;
-        const summerDip = (month >= 5 && month <= 7) ? -0.2 : 0;
-        const mondayBoost = dayOfWeek === 1 ? 0.2 : 0;
-        const fridayDip = dayOfWeek === 5 ? -0.15 : 0;
-
-        const baseChance = isWeekday ? 0.75 : 0.25;
-        const probability = Math.min(0.95, Math.max(0.05, baseChance + holidayBoost + summerDip + mondayBoost + fridayDip));
-
-        const hasActivity = seededRandom(dayOfYear * 137 + week * 31) < probability;
-
-        let count = 0;
-        if (hasActivity) {
-          const intensity = seededRandom(dayOfYear * 53 + week * 97);
-          if (isWeekday) {
-            count = intensity < 0.3 ? Math.floor(seededRandom(dayOfYear * 11) * 3) + 1
-              : intensity < 0.6 ? Math.floor(seededRandom(dayOfYear * 23) * 5) + 3
-              : intensity < 0.85 ? Math.floor(seededRandom(dayOfYear * 37) * 5) + 6
-              : Math.floor(seededRandom(dayOfYear * 43) * 5) + 10;
-          } else {
-            count = intensity < 0.6 ? Math.floor(seededRandom(dayOfYear * 19) * 2) + 1
-              : intensity < 0.9 ? Math.floor(seededRandom(dayOfYear * 29) * 3) + 2
-              : Math.floor(seededRandom(dayOfYear * 47) * 3) + 4;
+  for (let m = 0; m < 12; m++) {
+    const daysInMonth = new Date(2026, m + 1, 0).getDate();
+    const monthCol: { month: number; day: number; count: number; date: Date }[] = [];
+    for (let d = 1; d <= 31; d++) {
+      if (d <= daysInMonth) {
+        const date = new Date(2026, m, d);
+        if (date > today) {
+          monthCol.push({ month: m, day: d, count: -1, date });
+        } else {
+          const dayOfYear = m * 30 + d;
+          const isWeekday = date.getDay() >= 1 && date.getDay() <= 5;
+          const baseChance = isWeekday ? 0.72 : 0.2;
+          const monthBoost = (m >= 0 && m <= 2) ? 0.15 : (m >= 5 && m <= 7) ? -0.1 : 0;
+          const hasActivity = seededRandom(dayOfYear * 137 + m * 31) < (baseChance + monthBoost);
+          let count = 0;
+          if (hasActivity) {
+            const intensity = seededRandom(dayOfYear * 53 + m * 97);
+            count = isWeekday
+              ? intensity < 0.3 ? Math.floor(seededRandom(dayOfYear * 11) * 3) + 1
+                : intensity < 0.65 ? Math.floor(seededRandom(dayOfYear * 23) * 5) + 3
+                : intensity < 0.88 ? Math.floor(seededRandom(dayOfYear * 37) * 6) + 6
+                : Math.floor(seededRandom(dayOfYear * 43) * 4) + 11
+              : intensity < 0.6 ? Math.floor(seededRandom(dayOfYear * 19) * 2) + 1
+                : Math.floor(seededRandom(dayOfYear * 29) * 3) + 2;
           }
+          monthCol.push({ month: m, day: d, count, date });
         }
-
-        totalContributions += count;
-        weekCol.push({ date: new Date(current), count, row: day, col: week });
       }
-      current.setDate(current.getDate() + 1);
     }
-    grid.push(weekCol);
+    calendarData.push(monthCol);
   }
 
-  const validCounts = grid.flat().filter(d => d.count >= 0).map(d => d.count);
-
-  const getCellColor = (count: number) => {
-    if (count < 0) return 'bg-transparent';
-    if (count === 0) return 'bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05]';
-    if (count <= 2) return 'bg-emerald-900/30 dark:bg-emerald-500/15';
-    if (count <= 5) return 'bg-emerald-700/50 dark:bg-emerald-500/30';
-    if (count <= 8) return 'bg-emerald-600/70 dark:bg-emerald-500/50';
-    if (count <= 12) return 'bg-emerald-500/80 dark:bg-emerald-400/60';
-    return 'bg-emerald-500 dark:bg-emerald-400';
+  const getDotStyle = (count: number) => {
+    if (count < 0) return { bg: 'bg-transparent', shadow: '' };
+    if (count === 0) return { bg: 'bg-gray-100 dark:bg-white/[0.04] border border-gray-200/50 dark:border-white/[0.06]', shadow: '' };
+    if (count <= 2) return { bg: 'bg-cyan-400/30 dark:bg-cyan-400/20', shadow: '0 0 6px rgba(34,211,238,0.15)' };
+    if (count <= 5) return { bg: 'bg-cyan-400/50 dark:bg-cyan-400/35', shadow: '0 0 8px rgba(34,211,238,0.25)' };
+    if (count <= 8) return { bg: 'bg-cyan-400/70 dark:bg-cyan-400/50', shadow: '0 0 10px rgba(34,211,238,0.35)' };
+    return { bg: 'bg-cyan-400 dark:bg-cyan-300', shadow: '0 0 14px rgba(34,211,238,0.5)' };
   };
 
-  const monthLabels: { label: string; col: number }[] = [];
-  let lastMonth = -1;
-  grid.forEach((week, weekIdx) => {
-    const firstDay = week[0].date;
-    const month = firstDay.getMonth();
-    if (month !== lastMonth) {
-      monthLabels.push({ label: MONTHS[month], col: weekIdx });
-      lastMonth = month;
-    }
-  });
-
-  const hoveredData = hoveredCell ? grid[hoveredCell.col]?.[hoveredCell.row] : null;
-
-  const avgPerDay = totalContributions / 365;
-  const activeDays = validCounts.filter(c => c > 0).length;
-  const longestStreak = (() => {
-    let streak = 0, max = 0;
-    for (let i = validCounts.length - 1; i >= 0; i--) {
-      if (validCounts[i] > 0) { streak++; max = Math.max(max, streak); }
-      else streak = 0;
-    }
-    return max;
-  })();
+  const hoveredData = hovered ? calendarData[hovered.month]?.[hovered.day - 1] : null;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-bold text-gray-900 dark:text-white">{totalContributions.toLocaleString()} contributions</span>
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">in the last year</span>
+        <div>
+          <p className="text-sm font-bold text-gray-900 dark:text-white">Year in Review</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">Daily review activity for 2026</p>
         </div>
-        <div className="flex items-center gap-4 text-[11px] text-gray-400 dark:text-gray-500">
-          <span><span className="font-medium text-gray-600 dark:text-gray-300">{activeDays}</span> active days</span>
-          <span>Longest streak: <span className="font-medium text-gray-600 dark:text-gray-300">{longestStreak}</span> days</span>
-          <span>Avg: <span className="font-medium text-gray-600 dark:text-gray-300">{avgPerDay.toFixed(1)}</span>/day</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-gray-400">Less</span>
+          {['bg-gray-100 dark:bg-white/[0.04] border border-gray-200/50 dark:border-white/[0.06]',
+            'bg-cyan-400/30 dark:bg-cyan-400/20',
+            'bg-cyan-400/50 dark:bg-cyan-400/35',
+            'bg-cyan-400/70 dark:bg-cyan-400/50',
+            'bg-cyan-400 dark:bg-cyan-300'
+          ].map((c, i) => (
+            <div key={i} className={`w-[10px] h-[10px] rounded-full ${c}`} />
+          ))}
+          <span className="text-[10px] text-gray-400">More</span>
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-1">
-        <div className="inline-flex gap-0">
-          <div className="flex flex-col gap-[3px] mr-2 mt-5">
-            {DAY_LABELS.map((label, i) => (
-              <div key={i} className="h-[11px] flex items-center">
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">{label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <div className="flex h-4 mb-1">
-              {grid.map((_, weekIdx) => {
-                const ml = monthLabels.find(m => m.col === weekIdx);
+      <div className="overflow-x-auto">
+        <div className="inline-flex gap-4 min-w-max">
+          {calendarData.map((monthDays, monthIdx) => (
+            <div key={monthIdx} className="flex flex-col items-center gap-0.5">
+              <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mb-1">{MONTHS[monthIdx]}</span>
+              {monthDays.map((cell) => {
+                const style = getDotStyle(cell.count);
                 return (
-                  <div key={weekIdx} className="w-[13px] flex-shrink-0">
-                    {ml && (
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-none">{ml.label}</span>
-                    )}
-                  </div>
+                  cell.count < 0 ? (
+                    <div key={cell.day} className="w-[10px] h-[10px]" />
+                  ) : (
+                    <motion.div
+                      key={cell.day}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{
+                        delay: (monthIdx * 31 + cell.day) * 0.001,
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 30,
+                      }}
+                      onMouseEnter={(e) => {
+                        setHovered({ month: monthIdx, day: cell.day });
+                        setTipPos({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseMove={(e) => setTipPos({ x: e.clientX, y: e.clientY })}
+                      onMouseLeave={() => setHovered(null)}
+                      className={`w-[10px] h-[10px] rounded-full cursor-pointer transition-all duration-150 hover:scale-[1.6] hover:z-10 relative ${style.bg}`}
+                      style={{ boxShadow: style.shadow }}
+                    />
+                  )
                 );
               })}
             </div>
-
-            <div className="flex gap-[3px]">
-              {grid.map((week, weekIdx) => (
-                <div key={weekIdx} className="flex flex-col gap-[3px]">
-                  {week.map((cell) => (
-                    cell.count < 0 ? (
-                      <div key={`${cell.row}-${cell.col}`} className="w-[11px] h-[11px]" />
-                    ) : (
-                      <motion.div
-                        key={`${cell.row}-${cell.col}`}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{
-                          delay: Math.min(weekIdx * 2 + cell.row, 800) * 0.002,
-                          type: 'spring',
-                          stiffness: 400,
-                          damping: 25,
-                        }}
-                        onMouseEnter={(e) => {
-                          setHoveredCell({ row: cell.row, col: cell.col });
-                          setTooltipPos({ x: e.clientX, y: e.clientY });
-                        }}
-                        onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setHoveredCell(null)}
-                        className={`w-[11px] h-[11px] rounded-[2px] cursor-pointer transition-all duration-150 hover:ring-1 hover:ring-gray-400 dark:hover:ring-gray-500 hover:scale-[1.35] hover:z-10 relative ${getCellColor(cell.count)}`}
-                      />
-                    )
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
@@ -186,24 +127,13 @@ const GitHubHeatmap = () => {
             exit={{ opacity: 0, y: 4, scale: 0.95 }}
             transition={{ duration: 0.1 }}
             className="fixed z-50 bg-gray-900 dark:bg-gray-800 text-white text-[11px] px-3 py-2 rounded-lg shadow-xl pointer-events-none border border-gray-700/50"
-            style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 44 }}
+            style={{ left: tipPos.x + 12, top: tipPos.y - 44 }}
           >
-            <span className="font-semibold">{hoveredData.count} contributions</span>
-            <span className="text-gray-400 ml-1.5">{hoveredData.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            <span className="font-semibold">{hoveredData.count} reviews</span>
+            <span className="text-gray-400 ml-1.5">{hoveredData.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="flex items-center gap-1.5 justify-end pt-1 border-t border-gray-100 dark:border-dark-border">
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">Less</span>
-        <div className="w-[11px] h-[11px] rounded-[2px] bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05]" />
-        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-900/30 dark:bg-emerald-500/15" />
-        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-700/50 dark:bg-emerald-500/30" />
-        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-600/70 dark:bg-emerald-500/50" />
-        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-500/80 dark:bg-emerald-400/60" />
-        <div className="w-[11px] h-[11px] rounded-[2px] bg-emerald-500 dark:bg-emerald-400" />
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">More</span>
-      </div>
     </div>
   );
 };
@@ -283,11 +213,133 @@ const IssueTree = ({ issues }: { issues: any[] }) => {
   );
 };
 
+const TooltipBar = ({ value, label, sublabel, color, maxVal, delay = 0 }: {
+  value: number; label: string; sublabel: string; color: string; maxVal: number; delay?: number;
+}) => {
+  const [hovered, setHovered] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const barH = (value / maxVal) * 100;
+
+  return (
+    <div className="flex flex-col items-center" style={{ flex: 1 }}>
+      <div
+        className="relative w-full cursor-pointer"
+        style={{ height: '100%' }}
+        onMouseEnter={(e) => { setHovered(true); setPos({ x: e.clientX, y: e.clientY }); }}
+        onMouseMove={(e) => setPos({ x: e.clientX, y: e.clientY })}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div className="absolute bottom-0 w-full flex justify-center">
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: barH }}
+            transition={{ delay, duration: 0.5, ease: 'easeOut' }}
+            className="rounded-t-md transition-opacity hover:opacity-80"
+            style={{ width: '70%', backgroundColor: color, boxShadow: `0 0 12px ${color}44` }}
+          />
+        </div>
+      </div>
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            className="fixed z-50 bg-gray-900 dark:bg-gray-800 text-white text-[11px] px-3 py-2 rounded-lg shadow-xl pointer-events-none border border-gray-700/50"
+            style={{ left: pos.x + 12, top: pos.y - 50 }}
+          >
+            <div className="font-semibold">{label}</div>
+            <div className="text-gray-400">{sublabel}: <span style={{ color }}>{value}</span></div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const TooltipHorizontalBar = ({ label, count, total, color, icon: Icon, delay = 0 }: {
+  label: string; count: number; total: number; color: string; icon: any; delay?: number;
+}) => {
+  const [hovered, setHovered] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const pct = (count / (total || 1)) * 100;
+
+  return (
+    <div
+      className="flex items-center gap-3 cursor-pointer group"
+      onMouseEnter={(e) => { setHovered(true); setPos({ x: e.clientX, y: e.clientY }); }}
+      onMouseMove={(e) => setPos({ x: e.clientX, y: e.clientY })}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Icon size={13} className="text-gray-400 flex-shrink-0" />
+      <span className="text-xs text-gray-500 dark:text-gray-400 w-14">{label}</span>
+      <div className="flex-1 h-5 bg-gray-100 dark:bg-dark-surface rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-gray-300 dark:group-hover:ring-gray-600 transition-all">
+        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ delay, duration: 0.6 }} className={`h-full ${color} rounded-full`} />
+      </div>
+      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-6 text-right">{count}</span>
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            className="fixed z-50 bg-gray-900 dark:bg-gray-800 text-white text-[11px] px-3 py-2 rounded-lg shadow-xl pointer-events-none border border-gray-700/50"
+            style={{ left: pos.x + 12, top: pos.y - 44 }}
+          >
+            <span className="font-semibold">{label}</span>
+            <span className="text-gray-400 ml-1.5">{count} issues ({pct.toFixed(0)}%)</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const ContributorBar = ({ member, index }: { member: { name: string; reviews: number; pct: number }; index: number }) => {
+  const [hovered, setHovered] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  return (
+    <div
+      className="flex items-center gap-3 cursor-pointer group"
+      onMouseEnter={(e) => { setHovered(true); setPos({ x: e.clientX, y: e.clientY }); }}
+      onMouseMove={(e) => setPos({ x: e.clientX, y: e.clientY })}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div className="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+        <span className="text-primary-700 dark:text-primary-400 text-[10px] font-semibold">{member.name[0]}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{member.name}</span>
+          <span className="text-[10px] text-gray-400">{member.reviews}</span>
+        </div>
+        <div className="h-1.5 bg-gray-100 dark:bg-dark-surface rounded-full mt-1 overflow-hidden group-hover:ring-1 group-hover:ring-gray-300 dark:group-hover:ring-gray-600 transition-all">
+          <motion.div initial={{ width: 0 }} animate={{ width: `${member.pct}%` }} transition={{ delay: 0.3 + index * 0.1 }} className="h-full bg-primary-500 dark:bg-primary-400 rounded-full" />
+        </div>
+      </div>
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            className="fixed z-50 bg-gray-900 dark:bg-gray-800 text-white text-[11px] px-3 py-2 rounded-lg shadow-xl pointer-events-none border border-gray-700/50"
+            style={{ left: pos.x + 12, top: pos.y - 44 }}
+          >
+            <span className="font-semibold">{member.name}</span>
+            <span className="text-gray-400 ml-1.5">{member.reviews} reviews · {member.pct}% of total</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export const AnalyticsPage = () => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'tree' | 'heatmap'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'tree' | 'calendar'>('overview');
 
   useEffect(() => { loadData(); }, []);
 
@@ -310,6 +362,13 @@ export const AnalyticsPage = () => {
   const lowCount = issues.filter(i => i.severity === 'low').length;
   const totalIssues = criticalCount + highCount + mediumCount + lowCount || 1;
 
+  const trendScores = [4.2, 4.5, 3.8, 4.7, 4.1, 3.9, 4.4];
+  const trendLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const trendMax = 180;
+
+  const velocityData = [12, 18, 8, 22, 15, 10, 20, 14, 25, 16, 12, 28];
+  const velocityMax = 30;
+
   return (
     <div className="space-y-6">
       <div>
@@ -323,7 +382,7 @@ export const AnalyticsPage = () => {
           { id: 'overview', label: 'Overview', icon: BarChart3 },
           { id: 'issues', label: 'Issues', icon: AlertTriangle },
           { id: 'tree', label: 'Issue Tree', icon: Layers },
-          { id: 'heatmap', label: 'Activity', icon: Activity },
+          { id: 'calendar', label: 'Activity', icon: RefreshCw },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === tab.id ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
             <tab.icon size={13} /> {tab.label}
@@ -376,20 +435,13 @@ export const AnalyticsPage = () => {
                     { label: 'Medium', count: mediumCount, color: 'bg-amber-500', icon: Zap },
                     { label: 'Low', count: lowCount, color: 'bg-gray-400', icon: Target },
                   ].map((sev, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <sev.icon size={13} className="text-gray-400 flex-shrink-0" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400 w-14">{sev.label}</span>
-                      <div className="flex-1 h-5 bg-gray-100 dark:bg-dark-surface rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${(sev.count / totalIssues) * 100}%` }} transition={{ delay: 0.3 + i * 0.1, duration: 0.6 }} className={`h-full ${sev.color} rounded-full`} />
-                      </div>
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-6 text-right">{sev.count}</span>
-                    </div>
+                    <TooltipHorizontalBar key={i} label={sev.label} count={sev.count} total={totalIssues} color={sev.color} icon={sev.icon} delay={0.3 + i * 0.1} />
                   ))}
                 </div>
               </motion.div>
             </div>
 
-            {/* Trend */}
+            {/* AI Scores Trend */}
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-5 shadow-card">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">AI Scores Trend (Last 7 Reviews)</p>
@@ -399,35 +451,27 @@ export const AnalyticsPage = () => {
                   <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500" /><span className="text-[10px] text-gray-400">&lt;3.0</span></div>
                 </div>
               </div>
-              {(() => {
-                const scores = [4.2, 4.5, 3.8, 4.7, 4.1, 3.9, 4.4];
-                const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                const maxH = 180;
-                return (
-                  <div>
-                    <div className="flex items-end justify-between" style={{ height: maxH }}>
-                      {scores.map((score, i) => {
-                        const barH = (score / 5) * maxH;
-                        const bg = score >= 4 ? 'rgb(16,185,129)' : score >= 3 ? 'rgb(245,158,11)' : 'rgb(239,68,68)';
-                        return (
-                          <div key={i} className="flex flex-col items-center" style={{ flex: 1 }}>
-                            <span className="text-[11px] font-bold mb-1" style={{ color: bg }}>{score}</span>
-                            <div
-                              className="rounded-t-md w-10 sm:w-12 cursor-pointer hover:opacity-80 transition-opacity"
-                              style={{ height: barH, backgroundColor: bg, boxShadow: `0 0 12px ${bg}55` }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between mt-2">
-                      {labels.map((l, i) => (
-                        <span key={i} className="text-[10px] text-gray-400 dark:text-gray-500 font-medium" style={{ flex: 1, textAlign: 'center' }}>{l}</span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="flex items-end justify-between" style={{ height: trendMax }}>
+                {trendScores.map((score, i) => {
+                  const bg = score >= 4 ? 'rgb(16,185,129)' : score >= 3 ? 'rgb(245,158,11)' : 'rgb(239,68,68)';
+                  return (
+                    <TooltipBar
+                      key={i}
+                      value={score}
+                      label={trendLabels[i]}
+                      sublabel="AI Score"
+                      color={bg}
+                      maxVal={5}
+                      delay={i * 0.06}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex justify-between mt-2">
+                {trendLabels.map((l, i) => (
+                  <span key={i} className="text-[10px] text-gray-400 dark:text-gray-500 font-medium" style={{ flex: 1, textAlign: 'center' }}>{l}</span>
+                ))}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -494,16 +538,15 @@ export const AnalyticsPage = () => {
           </motion.div>
         )}
 
-        {/* Heatmap & Activity */}
-        {activeTab === 'heatmap' && (
-          <motion.div key="heatmap" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-4">
-            {/* GitHub-style Contribution Heatmap */}
+        {/* Activity Calendar */}
+        {activeTab === 'calendar' && (
+          <motion.div key="calendar" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-4">
             <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
-              <GitHubHeatmap />
+              <PulseCalendar />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Team Contribution */}
+              {/* Top Contributors */}
               <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">Top Contributors</p>
                 <div className="space-y-3">
@@ -513,39 +556,34 @@ export const AnalyticsPage = () => {
                     { name: 'Sarah Chen', reviews: 28, pct: 56 },
                     { name: 'Mike Rod', reviews: 22, pct: 44 },
                   ].map((member, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-500/20 flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary-700 dark:text-primary-400 text-[10px] font-semibold">{member.name[0]}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{member.name}</span>
-                          <span className="text-[10px] text-gray-400">{member.reviews}</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 dark:bg-dark-surface rounded-full mt-1 overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${member.pct}%` }} transition={{ delay: 0.3 + i * 0.1 }} className="h-full bg-primary-500 dark:bg-primary-400 rounded-full" />
-                        </div>
-                      </div>
-                    </div>
+                    <ContributorBar key={i} member={member} index={i} />
                   ))}
+                </div>
+              </div>
+
+              {/* Code Quality Breakdown */}
+              <div className="lg:col-span-2 bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">Review Velocity (12 Weeks)</p>
+                <div className="flex items-end gap-2 h-28">
+                  {velocityData.map((val, i) => (
+                    <TooltipBar
+                      key={i}
+                      value={val}
+                      label={`Week ${i + 1}`}
+                      sublabel="Reviews"
+                      color="rgb(139,92,246)"
+                      maxVal={velocityMax}
+                      delay={i * 0.04}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-between mt-2 text-[10px] text-gray-400">
+                  {velocityData.map((_, i) => <span key={i} style={{ flex: 1, textAlign: 'center' }}>W{i + 1}</span>)}
                 </div>
               </div>
             </div>
 
-            {/* Review Velocity */}
-            <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">Review Velocity (12 Weeks)</p>
-              <div className="flex items-end gap-2 h-28">
-                {[12, 18, 8, 22, 15, 10, 20, 14, 25, 16, 12, 28].map((val, i) => (
-                  <motion.div key={i} initial={{ height: 0 }} animate={{ height: `${(val / 30) * 100}%` }} transition={{ delay: i * 0.04 }} className="flex-1 bg-violet-500 dark:bg-violet-400 rounded-t opacity-80" />
-                ))}
-              </div>
-              <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-                {['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'].map(w => <span key={w}>{w}</span>)}
-              </div>
-            </div>
-
-            {/* Code Quality Breakdown */}
+            {/* Code Quality Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: 'Bugs', count: 3, icon: Bug, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-500/10' },
