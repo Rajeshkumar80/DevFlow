@@ -57,7 +57,7 @@ export const DashboardPage = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Dashboard <span className="text-gray-400 dark:text-gray-500 font-normal">/ CMS</span>
+          Dashboard
         </h1>
         <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-btn transition-all">
           <Plus size={16} /> New Review
