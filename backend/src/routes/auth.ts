@@ -18,6 +18,29 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  path: '/',
+};
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+  res.cookie('access_token', accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 60 * 60 * 1000,
+  });
+  res.cookie('refresh_token', refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
+}
+
+function clearAuthCookies(res: Response) {
+  res.clearCookie('access_token', { path: '/' });
+  res.clearCookie('refresh_token', { path: '/' });
+}
+
 export function createAuthRouter(db: any) {
   const router = Router();
   const authService = new AuthService(db);
@@ -49,7 +72,10 @@ export function createAuthRouter(db: any) {
       }
 
       const result = await authService.login(email, password);
-      res.status(200).json(result);
+
+      setAuthCookies(res, result.accessToken, result.refreshToken);
+
+      res.status(200).json({ user: result.user });
     } catch (err: any) {
       res.status(401).json({ error: err.message });
     }
@@ -57,13 +83,19 @@ export function createAuthRouter(db: any) {
 
   router.post('/refresh', async (req: Request, res: Response) => {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.cookies?.refresh_token;
 
       if (!refreshToken) {
-        return res.status(400).json({ error: 'Refresh token required' });
+        return res.status(401).json({ error: 'Refresh token required' });
       }
 
       const accessToken = await authService.refreshAccessToken(refreshToken);
+
+      res.cookie('access_token', accessToken, {
+        ...COOKIE_OPTIONS,
+        maxAge: 60 * 60 * 1000,
+      });
+
       res.status(200).json({ accessToken });
     } catch (err: any) {
       res.status(401).json({ error: err.message });
@@ -72,12 +104,14 @@ export function createAuthRouter(db: any) {
 
   router.post('/logout', async (req: Request, res: Response) => {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.cookies?.refresh_token;
       if (refreshToken) {
         AuthService.blacklistToken(refreshToken);
       }
+      clearAuthCookies(res);
       res.status(200).json({ message: 'Logged out successfully' });
     } catch {
+      clearAuthCookies(res);
       res.status(200).json({ message: 'Logged out successfully' });
     }
   });

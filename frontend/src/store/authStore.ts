@@ -3,63 +3,40 @@ import { User } from '../types';
 
 interface AuthState {
   user: User | null;
-  token: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   setUser: (user: User) => void;
-  setToken: (token: string, refreshToken?: string) => void;
-  login: (user: User, token: string, refreshToken?: string) => void;
+  login: (user: User) => void;
   logout: () => void;
 }
 
-const loadState = () => {
+const loadUser = (): User | null => {
   try {
-    const raw = localStorage.getItem('devflow-auth');
+    const raw = localStorage.getItem('devflow-user');
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.token && parsed.user) {
-        return { user: parsed.user, token: parsed.token, refreshToken: parsed.refreshToken || null, isAuthenticated: true };
-      }
+      return JSON.parse(raw);
     }
   } catch {}
-  return { user: null, token: null, refreshToken: null, isAuthenticated: false };
+  return null;
 };
 
-const saveState = (state: { user: User | null; token: string | null; refreshToken: string | null }) => {
-  try {
-    if (state.token && state.user) {
-      localStorage.setItem('devflow-auth', JSON.stringify({ user: state.user, token: state.token, refreshToken: state.refreshToken }));
-    } else {
-      localStorage.removeItem('devflow-auth');
-    }
-  } catch {}
-};
-
-const initial = loadState();
+const savedUser = loadUser();
 
 export const useAuthStore = create<AuthState>((set) => ({
-  ...initial,
+  user: savedUser,
+  isAuthenticated: !!savedUser,
 
-  setUser: (user) => set((state) => {
-    const next = { ...state, user, isAuthenticated: true };
-    saveState(next);
-    return { user, isAuthenticated: true };
-  }),
+  setUser: (user) => {
+    localStorage.setItem('devflow-user', JSON.stringify(user));
+    set({ user, isAuthenticated: true });
+  },
 
-  setToken: (token, refreshToken) => set((state) => {
-    const next = { ...state, token, refreshToken: refreshToken || state.refreshToken };
-    saveState(next);
-    return { token, refreshToken: refreshToken || state.refreshToken };
-  }),
-
-  login: (user, token, refreshToken) => {
-    const next = { user, token, refreshToken: refreshToken || null, isAuthenticated: true };
-    saveState(next);
-    set(next);
+  login: (user) => {
+    localStorage.setItem('devflow-user', JSON.stringify(user));
+    set({ user, isAuthenticated: true });
   },
 
   logout: () => {
-    localStorage.removeItem('devflow-auth');
-    set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
+    localStorage.removeItem('devflow-user');
+    set({ user: null, isAuthenticated: false });
   }
 }));

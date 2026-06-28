@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import bcrypt from 'bcryptjs';
+import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 
 import { createAuthRouter } from './routes/auth';
@@ -87,6 +88,7 @@ const mockDb: any = {
   sessions: [] as any[]
 };
 
+app.use(cookieParser());
 app.use(express.json({ limit: '2mb' }));
 
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',');

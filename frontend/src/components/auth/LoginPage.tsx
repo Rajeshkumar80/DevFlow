@@ -18,7 +18,7 @@ export const LoginPage = () => {
     setError(''); setLoading(true);
     try {
       const response = await authApi.login(email, password);
-      login(response.user, response.accessToken, response.refreshToken);
+      login(response.user);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
@@ -29,7 +29,7 @@ export const LoginPage = () => {
     setError(''); setLoading(true);
     try {
       const response = await authApi.login('demo@devflow.ai', 'demo123');
-      login(response.user, response.accessToken, response.refreshToken);
+      login(response.user);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Demo login failed');

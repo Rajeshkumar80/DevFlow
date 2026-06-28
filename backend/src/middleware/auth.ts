@@ -11,9 +11,13 @@ declare global {
   }
 }
 
+function extractToken(req: Request): string | undefined {
+  return req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
+}
+
 export const authMiddleware = (db: any) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = extractToken(req);
 
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
@@ -36,7 +40,7 @@ export const authMiddleware = (db: any) => {
 
 export const optionalAuthMiddleware = (db: any) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = extractToken(req);
 
     if (!token) {
       return next();

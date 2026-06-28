@@ -1,19 +1,14 @@
 import api from './api';
-import { LoginResponse, User } from '../types';
+import { User } from '../types';
 
 export const authApi = {
-  login: async (email: string, password: string): Promise<LoginResponse> => {
+  login: async (email: string, password: string): Promise<{ user: User }> => {
     const response = await api.post('/auth/login', { email, password });
     return response.data;
   },
 
   register: async (email: string, username: string, password: string, fullName?: string): Promise<{ user: User }> => {
     const response = await api.post('/auth/register', { email, username, password, full_name: fullName });
-    return response.data;
-  },
-
-  refreshToken: async (refreshToken: string): Promise<{ accessToken: string }> => {
-    const response = await api.post('/auth/refresh', { refreshToken });
     return response.data;
   },
 
