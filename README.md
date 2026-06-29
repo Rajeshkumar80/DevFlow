@@ -49,12 +49,12 @@ DevFlow/
 │       ├── db/              # Prisma client singleton
 │       ├── generated/       # Generated Prisma client (Prisma 6)
 │       ├── middleware/       # JWT auth, error handler, rate limiting
-│       ├── routes/          # REST API endpoints (16 routes)
+│       ├── routes/          # REST API endpoints (19 routes)
 │       ├── services/        # Business logic (AuthService, ReviewService, etc.)
 │       ├── types/           # TypeScript interfaces
 │       └── utils/           # Logger
 │   └── prisma/
-│       ├── schema.prisma    # Database schema (11 models)
+│       ├── schema.prisma    # Database schema (20 models)
 │       └── devflow.db       # SQLite database (auto-created)
 ├── frontend/
 │   └── src/
@@ -63,13 +63,23 @@ DevFlow/
 │       │   ├── dashboard/   # Main dashboard
 │       │   ├── review/      # Reviews list, detail, approve/reject
 │       │   ├── analytics/   # Charts, Pulse Calendar, tooltips
-│       │   ├── settings/    # Profile, API Keys, Team, Notifications, Security
+│       │   ├── settings/    # Profile, API Keys, Team, Notifications, Security, Integrations, Rules, Personas
 │       │   ├── pair/        # Real-time pair programming session
-│       │   └── learning/    # Skill tracking & learning paths
+│       │   ├── learning/    # Skill tracking & learning paths
+│       │   ├── integrations/ # GitHub repo connections
+│       │   ├── rules/       # Custom review rules
+│       │   ├── personas/    # AI review personas
+│       │   ├── costs/       # API cost tracking
+│       │   ├── quality/     # Code quality trends
+│       │   └── dependencies/ # Dependency impact analysis
 │       ├── services/        # Axios API client, auth API
 │       ├── store/           # Zustand auth store (user state in localStorage)
 │       ├── types/           # TypeScript types
 │       └── styles/          # Tailwind CSS
+├── devflow-mcp/             # MCP Server for IDE integration
+│   └── src/
+│       ├── server.ts        # MCP server with 3 tools
+│       └── client.ts        # HTTP client to DevFlow backend
 └── README.md
 ```
 
@@ -86,11 +96,45 @@ DevFlow/
 - Approve / Request Changes / Reject with comments
 - Priority levels: critical, high, medium, low
 - Status tracking: open, in_progress, approved, changes_requested, rejected
+- Ownership checks — only review owners can modify/delete
 
 ### Real-Time Pair Programming
 - Live code editing with sync
 - Built-in chat and terminal
 - Session history
+
+### GitHub Integration
+- Connect GitHub repos for auto-reviews on pull requests
+- Webhook receiver for PR events
+- Toggle auto-review per repository
+- Configure webhook secrets and access tokens
+
+### Review Rules
+- Custom rules enforced during AI analysis
+- Pattern matching (regex), forbidden terms, max lines, required patterns
+- Severity levels: info, warning, error, critical
+- Enable/disable rules individually
+
+### AI Review Personas
+- Choose AI personality for code reviews
+- 5 built-in personas: Strict, Security Auditor, Performance Expert, Friendly Mentor, Teaching Reviewer
+- Custom personas support
+
+### Cost Tracking
+- Monitor AI API usage and spending
+- Cost breakdown by model
+- Recent API call history with token counts
+
+### Quality Trends
+- Monthly quality score tracking
+- Issues per review metrics
+- Critical issue rate monitoring
+- Bar chart visualization over time
+
+### Dependency Impact Analysis
+- Scan repository for import dependencies
+- Impact score for file changes
+- Dependency graph visualization
 
 ### Team Analytics
 - AI Scores Trend (line chart with hover tooltips)
@@ -99,23 +143,31 @@ DevFlow/
 - Top Contributors (bar chart with hover tooltips)
 - Pulse Calendar — contribution dot matrix (replaces GitHub heatmap)
 
-### Settings (6 tabs)
+### Settings (9 tabs)
 - **Profile** — Edit name, email, bio
 - **API Keys** — Configure OpenRouter API key with validation
 - **Team** — Invite/remove team members
 - **Notifications** — Configure alert preferences
 - **Security** — Change password, manage sessions
-- **Integrations** — GitHub, Slack, Jira connections
+- **Integrations** — Connect GitHub repos for auto-reviews
+- **Rules** — Create custom review rules
+- **AI Personas** — Select reviewer personality
+- **Appearance** — Theme settings
+
+### MCP Server (IDE Integration)
+- Standalone MCP server for IDE plugins
+- Tools: `devflow_review`, `devflow_fix`, `devflow_explain`
+- Connects to DevFlow backend via HTTP
 
 ## API Endpoints
 
 ### Auth
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/v1/auth/register` | Create account |
+| `POST` | `/api/v1/auth/register` | Create account (password strength enforced) |
 | `POST` | `/api/v1/auth/login` | Login (sets httpOnly cookies) |
 | `POST` | `/api/v1/auth/refresh` | Refresh access token |
-| `POST` | `/api/v1/auth/logout` | Logout (clears cookies) |
+| `POST` | `/api/v1/auth/logout` | Logout (clears cookies, invalidates refresh token) |
 
 ### Reviews
 | Method | Endpoint | Description |
@@ -141,15 +193,47 @@ DevFlow/
 | `PATCH` | `/api/v1/:reviewId/comments/:commentId/resolve` | Resolve comment |
 | `DELETE` | `/api/v1/:reviewId/comments/:commentId` | Delete comment |
 
+### GitHub Integration
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/integrations/github` | Connect GitHub repo |
+| `GET` | `/api/v1/integrations/github` | List connected repos |
+| `PATCH` | `/api/v1/integrations/github/:id` | Toggle auto-review |
+| `DELETE` | `/api/v1/integrations/github/:id` | Disconnect repo |
+| `POST` | `/api/v1/webhooks/github` | GitHub webhook receiver |
+
+### Review Rules
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/repos/:repoId/rules` | List rules |
+| `POST` | `/api/v1/repos/:repoId/rules` | Create rule |
+| `PATCH` | `/api/v1/rules/:ruleId` | Update rule |
+| `DELETE` | `/api/v1/rules/:ruleId` | Delete rule |
+
+### Personas
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/personas` | List personas (5 defaults + custom) |
+| `POST` | `/api/v1/personas` | Create custom persona |
+| `DELETE` | `/api/v1/personas/:id` | Delete custom persona |
+
+### Analytics
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/analytics/team/:teamId` | Team analytics |
+| `GET` | `/api/v1/analytics/developer/:userId` | Developer analytics |
+| `GET` | `/api/v1/analytics/costs` | Cost tracking data |
+| `GET` | `/api/v1/analytics/quality` | Quality trends over time |
+
 ### Other
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/v1/notifications` | List notifications |
-| `GET` | `/api/v1/analytics/team/:teamId` | Team analytics |
-| `GET` | `/api/v1/analytics/developer/:userId` | Developer analytics |
 | `POST` | `/api/v1/repositories` | Create repository |
 | `GET` | `/api/v1/settings` | Get settings |
 | `POST` | `/api/v1/settings` | Update settings |
+| `POST` | `/api/v1/repos/:repoId/build-graph` | Build dependency graph |
+| `GET` | `/api/v1/repos/:repoId/impact/:filePath` | Get dependency impact |
 
 ## Security
 
@@ -167,6 +251,28 @@ All 12 vulnerabilities identified and fixed:
 | 10 | No HTML sanitization | `escapeHtml()` on comments |
 | 11 | 10mb JSON body limit | Reduced to 2mb |
 | 12 | Weak password requirements | Requires 8+ chars, uppercase, lowercase, number |
+
+## Database Schema (20 models)
+
+| Model | Description |
+|---|---|
+| User | User accounts |
+| Repository | Connected repositories |
+| Review | Code reviews |
+| Comment | Review comments |
+| Issue | Code issues |
+| Notification | User notifications |
+| Session | Pair programming sessions |
+| Setting | App settings (API keys, models) |
+| GithubConfig | GitHub repo connections |
+| WebhookLog | Webhook event logs |
+| FixSuggestion | AI-generated fix suggestions |
+| ReviewRule | Custom review rules |
+| CostEvent | API cost tracking events |
+| QualitySnapshot | Monthly quality metrics |
+| FileDependency | File dependency graph |
+| ReviewPersona | AI reviewer personalities |
+| CodeOwnership | File ownership assignments |
 
 ## Environment Variables
 
@@ -196,6 +302,12 @@ NODE_ENV="development"
 | `npm run dev` | Vite dev server (port 3000) |
 | `npm run build` | Production build |
 | `npm run preview` | Preview production build |
+
+### MCP Server
+| Script | Description |
+|---|---|
+| `npm run build` | Compile TypeScript |
+| `node dist/server.js` | Run MCP server (stdio) |
 
 ## License
 

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Settings, LogOut, Code2, FileCode, GraduationCap, Users, GitBranch, Layers, Bot, DollarSign, Activity } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Settings, LogOut, Code2, FileCode, GraduationCap, Users, GitBranch, Activity } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const sections = [
@@ -17,9 +17,6 @@ const sections = [
     label: 'TOOLS',
     items: [
       { icon: GitBranch, label: 'Integrations', path: '/integrations' },
-      { icon: Layers, label: 'Dependencies', path: '/dependencies' },
-      { icon: Bot, label: 'Personas', path: '/personas' },
-      { icon: DollarSign, label: 'Costs', path: '/costs' },
       { icon: Activity, label: 'Quality', path: '/quality' },
     ],
   },
