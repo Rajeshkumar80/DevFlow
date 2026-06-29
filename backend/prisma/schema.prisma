@@ -27,6 +27,9 @@ model User {
   notifications    Notification[]
   sessions         Session[]
   analyticsEvents  AnalyticsEvent[]
+  githubConfigs    GithubConfig[]
+  costEvents       CostEvent[]
+  codeOwnerships   CodeOwnership[]
 }
 
 model Repository {
@@ -40,6 +43,7 @@ model Repository {
   created_at DateTime @default(now())
 
   reviews Review[]
+  rules   ReviewRule[]
 }
 
 model Review {
@@ -66,6 +70,8 @@ model Review {
   issues     Issue[]
   comments   Comment[]
   codeFiles  CodeFile[]
+  fixSuggestions FixSuggestion[]
+  costEvents    CostEvent[]
 }
 
 model CodeFile {
@@ -91,6 +97,7 @@ model Issue {
   created_at  DateTime @default(now())
 
   review Review @relation(fields: [review_id], references: [id], onDelete: Cascade)
+  fixSuggestions FixSuggestion[]
 }
 
 model Comment {
@@ -160,4 +167,140 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model GithubConfig {
+  id                String   @id @default(cuid())
+  user_id           String
+  repo_owner        String
+  repo_name         String
+  repo_full_name    String
+  github_repo_id    Int?
+  webhook_secret    String
+  access_token      String
+  is_active         Boolean  @default(true)
+  auto_review       Boolean  @default(true)
+  default_persona   String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  user        User          @relation(fields: [user_id], references: [id])
+  webhookLogs WebhookLog[]
+}
+
+model WebhookLog {
+  id               String   @id @default(cuid())
+  github_config_id String
+  event_type       String
+  action           String
+  pr_number        Int
+  pr_title         String?
+  status           String   @default("received")
+  error_message    String?
+  payload          String?
+  created_at       DateTime @default(now())
+
+  githubConfig GithubConfig @relation(fields: [github_config_id], references: [id])
+}
+
+model FixSuggestion {
+  id            String   @id @default(cuid())
+  issue_id      String
+  review_id     String
+  original_code String
+  fixed_code    String
+  explanation   String
+  status        String   @default("pending")
+  applied_at    DateTime?
+  created_at    DateTime @default(now())
+
+  issue  Issue  @relation(fields: [issue_id], references: [id])
+  review Review @relation(fields: [review_id], references: [id])
+}
+
+model ReviewRule {
+  id         String   @id @default(cuid())
+  repo_id    String
+  name       String
+  type       String
+  pattern    String?
+  max_value  Int?
+  forbidden  String?
+  require    String?
+  severity   String   @default("warning")
+  message    String?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  repository Repository @relation(fields: [repo_id], references: [id])
+}
+
+model CostEvent {
+  id            String   @id @default(cuid())
+  user_id       String
+  review_id     String?
+  model         String
+  input_tokens  Int
+  output_tokens Int
+  cost_cents    Int
+  duration_ms   Int?
+  status        String   @default("success")
+  created_at    DateTime @default(now())
+
+  user   User    @relation(fields: [user_id], references: [id])
+  review Review? @relation(fields: [review_id], references: [id])
+}
+
+model QualitySnapshot {
+  id                String   @id @default(cuid())
+  team_id           String
+  period_start      DateTime
+  period_end        DateTime
+  avg_score         Float?
+  issues_per_review Float?
+  resolution_rate   Float?
+  critical_rate     Float?
+  review_count      Int      @default(0)
+  issue_count       Int      @default(0)
+  resolved_count    Int      @default(0)
+  created_at        DateTime @default(now())
+}
+
+model FileDependency {
+  id          String   @id @default(cuid())
+  repo_id     String
+  file_path   String
+  imports     String
+  imported_by String
+  language    String?
+  updated_at  DateTime @updatedAt
+
+  @@unique([repo_id, file_path])
+}
+
+model ReviewPersona {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  display_name  String
+  description   String?
+  system_prompt String
+  tone          String
+  icon          String?
+  is_custom     Boolean  @default(false)
+  user_id       String?
+  created_at    DateTime @default(now())
+}
+
+model CodeOwnership {
+  id              String   @id @default(cuid())
+  user_id         String
+  repo_id         String
+  file_pattern    String
+  review_count    Int      @default(0)
+  last_reviewed   DateTime?
+  expertise_score Float    @default(0)
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, repo_id, file_pattern])
 }
