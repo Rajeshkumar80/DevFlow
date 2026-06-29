@@ -4,11 +4,11 @@ import { BarChart3, AlertTriangle, Bug, Shield, Zap, Clock, FileCode, ChevronDow
 import { analysisApi } from '../../services/analysisApi';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const PulseCalendar = () => {
-  const [hovered, setHovered] = useState<{ week: number; day: number } | null>(null);
+  const [hovered, setHovered] = useState<{ month: number; day: number } | null>(null);
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
+  const [animPhase, setAnimPhase] = useState(0);
 
   const seededRandom = (seed: number) => {
     let x = Math.sin(seed) * 10000;
@@ -18,145 +18,189 @@ const PulseCalendar = () => {
   const today = new Date();
   const year = 2026;
 
-  // Build full year grid: 7 rows (days of week) x 53 columns (weeks)
-  const startDate = new Date(year, 0, 1);
-  const startDay = startDate.getDay();
-  const totalDays = 365;
-
-  interface DayCell {
-    date: Date;
-    count: number;
-    dayOfWeek: number;
-  }
-
-  const grid: (DayCell | null)[][] = Array.from({ length: 7 }, () => []);
-
-  for (let d = 0; d < totalDays; d++) {
-    const date = new Date(year, 0, d + 1);
-    const dayOfWeek = date.getDay();
-    if (date > today) {
-      grid[dayOfWeek].push(null);
-      continue;
-    }
-
-    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-    const baseChance = isWeekday ? 0.72 : 0.18;
-    const month = date.getMonth();
-    const monthBoost = (month >= 0 && month <= 2) ? 0.15 : (month >= 5 && month <= 7) ? -0.08 : 0;
-    const hasActivity = seededRandom(d * 137 + month * 31) < (baseChance + monthBoost);
-
-    let count = 0;
-    if (hasActivity) {
-      const intensity = seededRandom(d * 53 + month * 97);
-      count = isWeekday
-        ? intensity < 0.25 ? Math.floor(seededRandom(d * 11) * 2) + 1
-          : intensity < 0.55 ? Math.floor(seededRandom(d * 23) * 3) + 3
-          : intensity < 0.82 ? Math.floor(seededRandom(d * 37) * 4) + 6
-          : Math.floor(seededRandom(d * 43) * 5) + 10
-        : intensity < 0.65 ? Math.floor(seededRandom(d * 19) * 2) + 1
-          : Math.floor(seededRandom(d * 29) * 3) + 2;
-    }
-
-    grid[dayOfWeek].push({ date, count, dayOfWeek });
-  }
-
-  // Pad first week with empty cells
-  for (let i = 0; i < startDay; i++) {
-    grid[i].unshift(null);
-  }
-
-  // Get month labels with week positions
-  const monthPositions: { label: string; week: number }[] = [];
+  // Generate data: 12 months x 31 days
+  const calendarData: { month: number; day: number; count: number; date: Date }[][] = [];
   for (let m = 0; m < 12; m++) {
-    const firstDay = new Date(year, m, 1);
-    const adjusted = Math.floor((firstDay.getDate() - 1 + firstDay.getDay()) / 7);
-    monthPositions.push({ label: MONTHS[m], week: adjusted });
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    const monthData: { month: number; day: number; count: number; date: Date }[] = [];
+    for (let d = 1; d <= 31; d++) {
+      if (d <= daysInMonth) {
+        const date = new Date(year, m, d);
+        if (date > today) {
+          monthData.push({ month: m, day: d, count: -1, date });
+        } else {
+          const dayOfYear = m * 30 + d;
+          const dayOfWeek = date.getDay();
+          const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+          const baseChance = isWeekday ? 0.7 : 0.15;
+          const monthBoost = (m >= 0 && m <= 2) ? 0.12 : (m >= 5 && m <= 7) ? -0.05 : 0;
+          const hasActivity = seededRandom(dayOfYear * 137 + m * 31) < (baseChance + monthBoost);
+          let count = 0;
+          if (hasActivity) {
+            const intensity = seededRandom(dayOfYear * 53 + m * 97);
+            count = isWeekday
+              ? intensity < 0.25 ? Math.floor(seededRandom(dayOfYear * 11) * 2) + 1
+                : intensity < 0.55 ? Math.floor(seededRandom(dayOfYear * 23) * 3) + 3
+                : intensity < 0.82 ? Math.floor(seededRandom(dayOfYear * 37) * 4) + 6
+                : Math.floor(seededRandom(dayOfYear * 43) * 5) + 10
+              : intensity < 0.65 ? Math.floor(seededRandom(dayOfYear * 19) * 2) + 1
+                : Math.floor(seededRandom(dayOfYear * 29) * 3) + 2;
+          }
+          monthData.push({ month: m, day: d, count, date });
+        }
+      } else {
+        monthData.push({ month: m, day: d, count: -1, date: new Date(year, m, d) });
+      }
+    }
+    calendarData.push(monthData);
   }
 
-  const getCellColor = (count: number) => {
-    if (count === 0) return 'bg-gray-100 dark:bg-[#161b22]';
-    if (count <= 2) return 'bg-emerald-200 dark:bg-emerald-900/40';
-    if (count <= 5) return 'bg-emerald-400 dark:bg-emerald-700/60';
-    if (count <= 9) return 'bg-emerald-500 dark:bg-emerald-500/70';
-    return 'bg-emerald-600 dark:bg-emerald-400/80';
+  // SVG radial heatmap
+  const size = 320;
+  const cx = size / 2;
+  const cy = size / 2;
+  const innerRadius = 42;
+  const outerRadius = 140;
+  const ringGap = 2;
+  const ringWidth = (outerRadius - innerRadius - ringGap * 11) / 12;
+
+  const getColor = (count: number, isHovered: boolean) => {
+    if (count < 0) return 'transparent';
+    if (count === 0) return isHovered ? '#2d333b' : '#161b22';
+    if (count <= 2) return isHovered ? '#1a4d3e' : '#0e4429';
+    if (count <= 5) return isHovered ? '#26a65c' : '#006d32';
+    if (count <= 9) return isHovered ? '#3fb950' : '#26a641';
+    return isHovered ? '#56d364' : '#39d353';
   };
 
-  const hoveredCell = hovered ? grid[hovered.day]?.[hovered.week] : null;
+  useEffect(() => {
+    const t = setTimeout(() => setAnimPhase(1), 100);
+    return () => clearTimeout(t);
+  }, []);
+
+  const hoveredData = hovered ? calendarData[hovered.month]?.[hovered.day - 1] : null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Year in Review</p>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">Daily review activity for {year}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">Less</span>
-          <div className="flex gap-[3px]">
-            {[
-              'bg-gray-100 dark:bg-[#161b22]',
-              'bg-emerald-200 dark:bg-emerald-900/40',
-              'bg-emerald-400 dark:bg-emerald-700/60',
-              'bg-emerald-500 dark:bg-emerald-500/70',
-              'bg-emerald-600 dark:bg-emerald-400/80',
-            ].map((c, i) => (
-              <div key={i} className={`w-[11px] h-[11px] rounded-[2px] ${c}`} />
-            ))}
-          </div>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">More</span>
-        </div>
+    <div className="flex flex-col items-center gap-4">
+      <div className="text-center">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">Year in Review</p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500">Daily review activity for {year}</p>
       </div>
 
-      <div className="overflow-x-auto pb-1">
-        <div className="inline-flex flex-col gap-0">
-          {/* Month labels */}
-          <div className="flex ml-[28px] mb-1">
-            {monthPositions.map((mp, i) => (
-              <div key={i} className="text-[10px] text-gray-400 dark:text-gray-500 font-medium" style={{ width: `${(grid[0].length) * 13}px`, minWidth: `${mp.week * 13}px`, marginLeft: i === 0 ? 0 : undefined }}>
-                {mp.label}
-              </div>
-            ))}
-          </div>
+      <div className="relative" style={{ width: size, height: size }}>
+        {/* Month labels around the circle */}
+        {MONTHS.map((month, i) => {
+          const angle = (i / 12) * 2 * Math.PI - Math.PI / 2;
+          const labelRadius = outerRadius + 18;
+          const x = cx + labelRadius * Math.cos(angle);
+          const y = cy + labelRadius * Math.sin(angle);
+          return (
+            <span
+              key={month}
+              className="absolute text-[9px] font-medium text-gray-400 dark:text-gray-500"
+              style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }}
+            >
+              {month}
+            </span>
+          );
+        })}
 
-          {/* Grid */}
-          {grid.map((row, dayIdx) => (
-            <div key={dayIdx} className="flex items-center gap-0">
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 w-[24px] text-right pr-2 font-medium">
-                {dayIdx % 2 === 1 ? DAYS[dayIdx] : ''}
-              </span>
-              <div className="flex gap-[3px]">
-                {row.map((cell, weekIdx) => (
-                  cell === null ? (
-                    <div key={weekIdx} className="w-[11px] h-[11px]" />
-                  ) : (
-                    <motion.div
-                      key={weekIdx}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{
-                        delay: (weekIdx * 7 + dayIdx) * 0.002,
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 28,
-                      }}
-                      onMouseEnter={(e) => {
-                        setHovered({ week: weekIdx, day: dayIdx });
-                        setTipPos({ x: e.clientX, y: e.clientY });
-                      }}
-                      onMouseMove={(e) => setTipPos({ x: e.clientX, y: e.clientY })}
-                      onMouseLeave={() => setHovered(null)}
-                      className={`w-[11px] h-[11px] rounded-[2px] cursor-pointer transition-all duration-150 hover:scale-[1.4] hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 hover:z-10 relative ${getCellColor(cell.count)}`}
-                    />
-                  )
-                ))}
-              </div>
-            </div>
+        <svg width={size} height={size} className="overflow-visible">
+          {/* Center circle */}
+          <circle cx={cx} cy={cy} r={innerRadius - 4} fill="none" stroke="currentColor" strokeWidth="0.5" className="text-gray-200 dark:text-gray-700/50" />
+          <text x={cx} y={cy - 6} textAnchor="middle" className="fill-gray-400 dark:fill-gray-500" fontSize="9" fontWeight="500">TOTAL</text>
+          <text x={cx} y={cy + 10} textAnchor="middle" className="fill-gray-900 dark:fill-white" fontSize="18" fontWeight="700">
+            {calendarData.flat().filter(d => d.count > 0).reduce((s, d) => s + d.count, 0)}
+          </text>
+
+          {/* Rings: outer = Jan, inner = Dec */}
+          {calendarData.map((monthDays, monthIdx) => {
+            const ringIdx = 11 - monthIdx;
+            const r = innerRadius + ringGap + ringIdx * (ringWidth + ringGap) + ringWidth / 2;
+            const daysInMonth = monthDays.filter(d => d.count >= 0).length;
+
+            return monthDays.map((cell, dayIdx) => {
+              if (cell.count < 0 && cell.day > daysInMonth) return null;
+
+              const startAngle = ((dayIdx / 31) * 360 - 90) * (Math.PI / 180);
+              const endAngle = (((dayIdx + 1) / 31) * 360 - 90) * (Math.PI / 180);
+              const gap = 0.02;
+              const sa = startAngle + gap;
+              const ea = endAngle - gap;
+
+              const x1 = cx + r * Math.cos(sa);
+              const y1 = cy + r * Math.sin(sa);
+              const x2 = cx + r * Math.cos(ea);
+              const y2 = cy + r * Math.sin(ea);
+
+              const isHovered = hovered?.month === monthIdx && hovered?.day === dayIdx;
+              const color = getColor(cell.count, isHovered);
+
+              const largeArc = (ea - sa) > Math.PI ? 1 : 0;
+
+              return (
+                <motion.path
+                  key={`${monthIdx}-${dayIdx}`}
+                  d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`}
+                  stroke={color}
+                  strokeWidth={ringWidth}
+                  fill="none"
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{
+                    pathLength: animPhase ? 1 : 0,
+                    opacity: animPhase ? 1 : 0,
+                  }}
+                  transition={{
+                    delay: (monthIdx * 31 + dayIdx) * 0.001,
+                    duration: 0.3,
+                    ease: 'easeOut',
+                  }}
+                  className="cursor-pointer"
+                  style={{ filter: isHovered ? 'brightness(1.3)' : 'none' }}
+                  onMouseEnter={(e) => {
+                    setHovered({ month: monthIdx, day: dayIdx });
+                    setTipPos({ x: e.clientX, y: e.clientY });
+                  }}
+                  onMouseMove={(e) => setTipPos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHovered(null)}
+                />
+              );
+            });
+          })}
+
+          {/* Month separator lines */}
+          {MONTHS.map((_, i) => {
+            const angle = (i / 12) * 2 * Math.PI - Math.PI / 2;
+            return (
+              <line
+                key={i}
+                x1={cx + innerRadius * Math.cos(angle)}
+                y1={cy + innerRadius * Math.sin(angle)}
+                x2={cx + (outerRadius + 2) * Math.cos(angle)}
+                y2={cy + (outerRadius + 2) * Math.sin(angle)}
+                stroke="currentColor"
+                strokeWidth="0.3"
+                className="text-gray-200 dark:text-gray-700/40"
+              />
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">Less</span>
+        <div className="flex gap-[3px]">
+          {['bg-[#161b22] dark:bg-[#161b22]', 'bg-[#0e4429] dark:bg-[#0e4429]', 'bg-[#006d32] dark:bg-[#006d32]', 'bg-[#26a641] dark:bg-[#26a641]', 'bg-[#39d353] dark:bg-[#39d353]'].map((c, i) => (
+            <div key={i} className={`w-[11px] h-[11px] rounded-[2px] ${c}`} />
           ))}
         </div>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">More</span>
       </div>
 
       <AnimatePresence>
-        {hoveredCell && (
+        {hoveredData && hoveredData.count >= 0 && (
           <motion.div
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -165,9 +209,9 @@ const PulseCalendar = () => {
             className="fixed z-50 bg-gray-900 dark:bg-gray-800 text-white text-[11px] px-3 py-2 rounded-lg shadow-xl pointer-events-none border border-gray-700/50"
             style={{ left: tipPos.x + 12, top: tipPos.y - 44 }}
           >
-            <span className="font-semibold">{hoveredCell.count} reviews</span>
+            <span className="font-semibold">{hoveredData.count} reviews</span>
             <span className="text-gray-400 ml-1.5">
-              {hoveredCell.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              {hoveredData.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           </motion.div>
         )}
