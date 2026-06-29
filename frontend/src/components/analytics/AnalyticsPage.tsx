@@ -8,7 +8,6 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const PulseCalendar = () => {
   const [hovered, setHovered] = useState<{ month: number; day: number } | null>(null);
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
-  const [animPhase, setAnimPhase] = useState(0);
 
   const seededRandom = (seed: number) => {
     let x = Math.sin(seed) * 10000;
@@ -18,7 +17,6 @@ const PulseCalendar = () => {
   const today = new Date();
   const year = 2026;
 
-  // Generate data: 12 months x 31 days
   const calendarData: { month: number; day: number; count: number; date: Date }[][] = [];
   for (let m = 0; m < 12; m++) {
     const daysInMonth = new Date(year, m + 1, 0).getDate();
@@ -55,148 +53,87 @@ const PulseCalendar = () => {
     calendarData.push(monthData);
   }
 
-  // SVG radial heatmap
-  const size = 320;
-  const cx = size / 2;
-  const cy = size / 2;
-  const innerRadius = 42;
-  const outerRadius = 140;
-  const ringGap = 2;
-  const ringWidth = (outerRadius - innerRadius - ringGap * 11) / 12;
-
-  const getColor = (count: number, isHovered: boolean) => {
-    if (count < 0) return 'transparent';
-    if (count === 0) return isHovered ? '#2d333b' : '#161b22';
-    if (count <= 2) return isHovered ? '#1a4d3e' : '#0e4429';
-    if (count <= 5) return isHovered ? '#26a65c' : '#006d32';
-    if (count <= 9) return isHovered ? '#3fb950' : '#26a641';
-    return isHovered ? '#56d364' : '#39d353';
+  const getCellColor = (count: number) => {
+    if (count < 0) return 'bg-transparent';
+    if (count === 0) return 'bg-gray-100 dark:bg-white/[0.05]';
+    if (count <= 2) return 'bg-emerald-100 dark:bg-emerald-500/15';
+    if (count <= 5) return 'bg-emerald-300 dark:bg-emerald-500/30';
+    if (count <= 9) return 'bg-emerald-400 dark:bg-emerald-500/50';
+    return 'bg-emerald-500 dark:bg-emerald-400/70';
   };
 
-  useEffect(() => {
-    const t = setTimeout(() => setAnimPhase(1), 100);
-    return () => clearTimeout(t);
-  }, []);
+  const getCellBorder = (count: number) => {
+    if (count <= 0) return 'border-transparent';
+    return 'border-emerald-200/50 dark:border-emerald-500/10';
+  };
 
   const hoveredData = hovered ? calendarData[hovered.month]?.[hovered.day - 1] : null;
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="text-center">
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">Year in Review</p>
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">Daily review activity for {year}</p>
-      </div>
-
-      <div className="relative" style={{ width: size, height: size }}>
-        {/* Month labels around the circle */}
-        {MONTHS.map((month, i) => {
-          const angle = (i / 12) * 2 * Math.PI - Math.PI / 2;
-          const labelRadius = outerRadius + 18;
-          const x = cx + labelRadius * Math.cos(angle);
-          const y = cy + labelRadius * Math.sin(angle);
-          return (
-            <span
-              key={month}
-              className="absolute text-[9px] font-medium text-gray-400 dark:text-gray-500"
-              style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }}
-            >
-              {month}
-            </span>
-          );
-        })}
-
-        <svg width={size} height={size} className="overflow-visible">
-          {/* Center circle */}
-          <circle cx={cx} cy={cy} r={innerRadius - 4} fill="none" stroke="currentColor" strokeWidth="0.5" className="text-gray-200 dark:text-gray-700/50" />
-          <text x={cx} y={cy - 6} textAnchor="middle" className="fill-gray-400 dark:fill-gray-500" fontSize="9" fontWeight="500">TOTAL</text>
-          <text x={cx} y={cy + 10} textAnchor="middle" className="fill-gray-900 dark:fill-white" fontSize="18" fontWeight="700">
-            {calendarData.flat().filter(d => d.count > 0).reduce((s, d) => s + d.count, 0)}
-          </text>
-
-          {/* Rings: outer = Jan, inner = Dec */}
-          {calendarData.map((monthDays, monthIdx) => {
-            const ringIdx = 11 - monthIdx;
-            const r = innerRadius + ringGap + ringIdx * (ringWidth + ringGap) + ringWidth / 2;
-            const daysInMonth = monthDays.filter(d => d.count >= 0).length;
-
-            return monthDays.map((cell, dayIdx) => {
-              if (cell.count < 0 && cell.day > daysInMonth) return null;
-
-              const startAngle = ((dayIdx / 31) * 360 - 90) * (Math.PI / 180);
-              const endAngle = (((dayIdx + 1) / 31) * 360 - 90) * (Math.PI / 180);
-              const gap = 0.02;
-              const sa = startAngle + gap;
-              const ea = endAngle - gap;
-
-              const x1 = cx + r * Math.cos(sa);
-              const y1 = cy + r * Math.sin(sa);
-              const x2 = cx + r * Math.cos(ea);
-              const y2 = cy + r * Math.sin(ea);
-
-              const isHovered = hovered?.month === monthIdx && hovered?.day === dayIdx;
-              const color = getColor(cell.count, isHovered);
-
-              const largeArc = (ea - sa) > Math.PI ? 1 : 0;
-
-              return (
-                <motion.path
-                  key={`${monthIdx}-${dayIdx}`}
-                  d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`}
-                  stroke={color}
-                  strokeWidth={ringWidth}
-                  fill="none"
-                  strokeLinecap="round"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{
-                    pathLength: animPhase ? 1 : 0,
-                    opacity: animPhase ? 1 : 0,
-                  }}
-                  transition={{
-                    delay: (monthIdx * 31 + dayIdx) * 0.001,
-                    duration: 0.3,
-                    ease: 'easeOut',
-                  }}
-                  className="cursor-pointer"
-                  style={{ filter: isHovered ? 'brightness(1.3)' : 'none' }}
-                  onMouseEnter={(e) => {
-                    setHovered({ month: monthIdx, day: dayIdx });
-                    setTipPos({ x: e.clientX, y: e.clientY });
-                  }}
-                  onMouseMove={(e) => setTipPos({ x: e.clientX, y: e.clientY })}
-                  onMouseLeave={() => setHovered(null)}
-                />
-              );
-            });
-          })}
-
-          {/* Month separator lines */}
-          {MONTHS.map((_, i) => {
-            const angle = (i / 12) * 2 * Math.PI - Math.PI / 2;
-            return (
-              <line
-                key={i}
-                x1={cx + innerRadius * Math.cos(angle)}
-                y1={cy + innerRadius * Math.sin(angle)}
-                x2={cx + (outerRadius + 2) * Math.cos(angle)}
-                y2={cy + (outerRadius + 2) * Math.sin(angle)}
-                stroke="currentColor"
-                strokeWidth="0.3"
-                className="text-gray-200 dark:text-gray-700/40"
-              />
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">Less</span>
-        <div className="flex gap-[3px]">
-          {['bg-[#161b22] dark:bg-[#161b22]', 'bg-[#0e4429] dark:bg-[#0e4429]', 'bg-[#006d32] dark:bg-[#006d32]', 'bg-[#26a641] dark:bg-[#26a641]', 'bg-[#39d353] dark:bg-[#39d353]'].map((c, i) => (
-            <div key={i} className={`w-[11px] h-[11px] rounded-[2px] ${c}`} />
-          ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">Year in Review</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">Daily review activity for {year}</p>
         </div>
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">More</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">Less</span>
+          <div className="flex gap-[3px]">
+            {[
+              'bg-gray-100 dark:bg-white/[0.05]',
+              'bg-emerald-100 dark:bg-emerald-500/15',
+              'bg-emerald-300 dark:bg-emerald-500/30',
+              'bg-emerald-400 dark:bg-emerald-500/50',
+              'bg-emerald-500 dark:bg-emerald-400/70',
+            ].map((c, i) => (
+              <div key={i} className={`w-[11px] h-[11px] rounded-[2px] ${c}`} />
+            ))}
+          </div>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">More</span>
+        </div>
+      </div>
+
+      <div className="space-y-[3px]">
+        {calendarData.map((monthDays, monthIdx) => (
+          <div key={monthIdx} className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium w-[22px] text-right">
+              {MONTHS[monthIdx]}
+            </span>
+            <div className="flex gap-[3px]">
+              {monthDays.map((cell) => (
+                cell.count < 0 ? (
+                  <div key={cell.day} className="w-[11px] h-[11px]" />
+                ) : (
+                  <motion.div
+                    key={cell.day}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{
+                      delay: (monthIdx * 31 + cell.day) * 0.002,
+                      type: 'spring',
+                      stiffness: 500,
+                      damping: 28,
+                    }}
+                    onMouseEnter={(e) => {
+                      setHovered({ month: monthIdx, day: cell.day });
+                      setTipPos({ x: e.clientX, y: e.clientY });
+                    }}
+                    onMouseMove={(e) => setTipPos({ x: e.clientX, y: e.clientY })}
+                    onMouseLeave={() => setHovered(null)}
+                    className={`w-[11px] h-[11px] rounded-[2px] cursor-pointer transition-all duration-150 hover:scale-[1.5] hover:z-10 relative border ${getCellColor(cell.count)} ${getCellBorder(cell.count)}`}
+                  />
+                )
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Day labels */}
+      <div className="flex items-center gap-2 ml-[28px]">
+        {['M', '', 'W', '', 'F', '', ''].map((d, i) => (
+          <span key={i} className="text-[8px] text-gray-300 dark:text-gray-600 w-[11px] text-center">{d}</span>
+        ))}
       </div>
 
       <AnimatePresence>
