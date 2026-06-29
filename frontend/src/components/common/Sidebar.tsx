@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Settings, LogOut, Code2, FileCode, GraduationCap, Users } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Settings, LogOut, Code2, FileCode, GraduationCap, Users, GitBranch, Layers, Bot, DollarSign, Activity } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const sections = [
@@ -11,6 +11,16 @@ const sections = [
       { icon: FileCode, label: 'Reviews', path: '/reviews', badge: '5' },
       { icon: Users, label: 'Pair Programming', path: '/pair' },
       { icon: GraduationCap, label: 'Learning', path: '/learning' },
+    ],
+  },
+  {
+    label: 'TOOLS',
+    items: [
+      { icon: GitBranch, label: 'Integrations', path: '/integrations' },
+      { icon: Layers, label: 'Dependencies', path: '/dependencies' },
+      { icon: Bot, label: 'Personas', path: '/personas' },
+      { icon: DollarSign, label: 'Costs', path: '/costs' },
+      { icon: Activity, label: 'Quality', path: '/quality' },
     ],
   },
   {

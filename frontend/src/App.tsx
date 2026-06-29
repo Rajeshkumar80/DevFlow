@@ -12,6 +12,12 @@ import { AnalyticsPage } from './components/analytics/AnalyticsPage';
 import { LearningPage } from './components/learning/LearningPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { HelpSupportPage } from './components/help/HelpSupportPage';
+import { IntegrationsPage } from './components/integrations/IntegrationsPage';
+import { RulesPage } from './components/rules/RulesPage';
+import { PersonasPage } from './components/personas/PersonasPage';
+import { CostsPage } from './components/costs/CostsPage';
+import { QualityPage } from './components/quality/QualityPage';
+import { DependenciesPage } from './components/dependencies/DependenciesPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -44,6 +50,12 @@ function App() {
       <Route path="/learning" element={<ProtectedRoute><AppLayout><LearningPage /></AppLayout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
       <Route path="/help" element={<ProtectedRoute><AppLayout><HelpSupportPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/integrations" element={<ProtectedRoute><AppLayout><IntegrationsPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/rules" element={<ProtectedRoute><AppLayout><RulesPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/personas" element={<ProtectedRoute><AppLayout><PersonasPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/costs" element={<ProtectedRoute><AppLayout><CostsPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/quality" element={<ProtectedRoute><AppLayout><QualityPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/dependencies" element={<ProtectedRoute><AppLayout><DependenciesPage /></AppLayout></ProtectedRoute>} />
     </Routes>
   );
 }
