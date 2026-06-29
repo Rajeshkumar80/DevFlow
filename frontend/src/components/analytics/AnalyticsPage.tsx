@@ -4,9 +4,10 @@ import { BarChart3, AlertTriangle, Bug, Shield, Zap, Clock, FileCode, ChevronDow
 import { analysisApi } from '../../services/analysisApi';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const PulseCalendar = () => {
-  const [hovered, setHovered] = useState<{ month: number; day: number } | null>(null);
+  const [hovered, setHovered] = useState<{ week: number; day: number } | null>(null);
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
 
   const seededRandom = (seed: number) => {
@@ -15,112 +16,147 @@ const PulseCalendar = () => {
   };
 
   const today = new Date();
-  const calendarData: { month: number; day: number; count: number; date: Date }[][] = [];
+  const year = 2026;
 
-  for (let m = 0; m < 12; m++) {
-    const daysInMonth = new Date(2026, m + 1, 0).getDate();
-    const monthCol: { month: number; day: number; count: number; date: Date }[] = [];
-    for (let d = 1; d <= 31; d++) {
-      if (d <= daysInMonth) {
-        const date = new Date(2026, m, d);
-        if (date > today) {
-          monthCol.push({ month: m, day: d, count: -1, date });
-        } else {
-          const dayOfYear = m * 30 + d;
-          const isWeekday = date.getDay() >= 1 && date.getDay() <= 5;
-          const baseChance = isWeekday ? 0.72 : 0.2;
-          const monthBoost = (m >= 0 && m <= 2) ? 0.15 : (m >= 5 && m <= 7) ? -0.1 : 0;
-          const hasActivity = seededRandom(dayOfYear * 137 + m * 31) < (baseChance + monthBoost);
-          let count = 0;
-          if (hasActivity) {
-            const intensity = seededRandom(dayOfYear * 53 + m * 97);
-            count = isWeekday
-              ? intensity < 0.3 ? Math.floor(seededRandom(dayOfYear * 11) * 3) + 1
-                : intensity < 0.65 ? Math.floor(seededRandom(dayOfYear * 23) * 5) + 3
-                : intensity < 0.88 ? Math.floor(seededRandom(dayOfYear * 37) * 6) + 6
-                : Math.floor(seededRandom(dayOfYear * 43) * 4) + 11
-              : intensity < 0.6 ? Math.floor(seededRandom(dayOfYear * 19) * 2) + 1
-                : Math.floor(seededRandom(dayOfYear * 29) * 3) + 2;
-          }
-          monthCol.push({ month: m, day: d, count, date });
-        }
-      }
-    }
-    calendarData.push(monthCol);
+  // Build full year grid: 7 rows (days of week) x 53 columns (weeks)
+  const startDate = new Date(year, 0, 1);
+  const startDay = startDate.getDay();
+  const totalDays = 365;
+
+  interface DayCell {
+    date: Date;
+    count: number;
+    dayOfWeek: number;
   }
 
-  const getDotStyle = (count: number) => {
-    if (count < 0) return { bg: 'bg-transparent', shadow: '' };
-    if (count === 0) return { bg: 'bg-gray-100 dark:bg-white/[0.04] border border-gray-200/50 dark:border-white/[0.06]', shadow: '' };
-    if (count <= 2) return { bg: 'bg-cyan-400/30 dark:bg-cyan-400/20', shadow: '0 0 6px rgba(34,211,238,0.15)' };
-    if (count <= 5) return { bg: 'bg-cyan-400/50 dark:bg-cyan-400/35', shadow: '0 0 8px rgba(34,211,238,0.25)' };
-    if (count <= 8) return { bg: 'bg-cyan-400/70 dark:bg-cyan-400/50', shadow: '0 0 10px rgba(34,211,238,0.35)' };
-    return { bg: 'bg-cyan-400 dark:bg-cyan-300', shadow: '0 0 14px rgba(34,211,238,0.5)' };
+  const grid: (DayCell | null)[][] = Array.from({ length: 7 }, () => []);
+
+  for (let d = 0; d < totalDays; d++) {
+    const date = new Date(year, 0, d + 1);
+    const dayOfWeek = date.getDay();
+    if (date > today) {
+      grid[dayOfWeek].push(null);
+      continue;
+    }
+
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+    const baseChance = isWeekday ? 0.72 : 0.18;
+    const month = date.getMonth();
+    const monthBoost = (month >= 0 && month <= 2) ? 0.15 : (month >= 5 && month <= 7) ? -0.08 : 0;
+    const hasActivity = seededRandom(d * 137 + month * 31) < (baseChance + monthBoost);
+
+    let count = 0;
+    if (hasActivity) {
+      const intensity = seededRandom(d * 53 + month * 97);
+      count = isWeekday
+        ? intensity < 0.25 ? Math.floor(seededRandom(d * 11) * 2) + 1
+          : intensity < 0.55 ? Math.floor(seededRandom(d * 23) * 3) + 3
+          : intensity < 0.82 ? Math.floor(seededRandom(d * 37) * 4) + 6
+          : Math.floor(seededRandom(d * 43) * 5) + 10
+        : intensity < 0.65 ? Math.floor(seededRandom(d * 19) * 2) + 1
+          : Math.floor(seededRandom(d * 29) * 3) + 2;
+    }
+
+    grid[dayOfWeek].push({ date, count, dayOfWeek });
+  }
+
+  // Pad first week with empty cells
+  for (let i = 0; i < startDay; i++) {
+    grid[i].unshift(null);
+  }
+
+  // Get month labels with week positions
+  const monthPositions: { label: string; week: number }[] = [];
+  for (let m = 0; m < 12; m++) {
+    const firstDay = new Date(year, m, 1);
+    const adjusted = Math.floor((firstDay.getDate() - 1 + firstDay.getDay()) / 7);
+    monthPositions.push({ label: MONTHS[m], week: adjusted });
+  }
+
+  const getCellColor = (count: number) => {
+    if (count === 0) return 'bg-gray-100 dark:bg-[#161b22]';
+    if (count <= 2) return 'bg-emerald-200 dark:bg-emerald-900/40';
+    if (count <= 5) return 'bg-emerald-400 dark:bg-emerald-700/60';
+    if (count <= 9) return 'bg-emerald-500 dark:bg-emerald-500/70';
+    return 'bg-emerald-600 dark:bg-emerald-400/80';
   };
 
-  const hoveredData = hovered ? calendarData[hovered.month]?.[hovered.day - 1] : null;
+  const hoveredCell = hovered ? grid[hovered.day]?.[hovered.week] : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-bold text-gray-900 dark:text-white">Year in Review</p>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">Daily review activity for 2026</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">Year in Review</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">Daily review activity for {year}</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-400">Less</span>
-          {['bg-gray-100 dark:bg-white/[0.04] border border-gray-200/50 dark:border-white/[0.06]',
-            'bg-cyan-400/30 dark:bg-cyan-400/20',
-            'bg-cyan-400/50 dark:bg-cyan-400/35',
-            'bg-cyan-400/70 dark:bg-cyan-400/50',
-            'bg-cyan-400 dark:bg-cyan-300'
-          ].map((c, i) => (
-            <div key={i} className={`w-[10px] h-[10px] rounded-full ${c}`} />
-          ))}
-          <span className="text-[10px] text-gray-400">More</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">Less</span>
+          <div className="flex gap-[3px]">
+            {[
+              'bg-gray-100 dark:bg-[#161b22]',
+              'bg-emerald-200 dark:bg-emerald-900/40',
+              'bg-emerald-400 dark:bg-emerald-700/60',
+              'bg-emerald-500 dark:bg-emerald-500/70',
+              'bg-emerald-600 dark:bg-emerald-400/80',
+            ].map((c, i) => (
+              <div key={i} className={`w-[11px] h-[11px] rounded-[2px] ${c}`} />
+            ))}
+          </div>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">More</span>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="inline-flex gap-4 min-w-max">
-          {calendarData.map((monthDays, monthIdx) => (
-            <div key={monthIdx} className="flex flex-col items-center gap-0.5">
-              <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mb-1">{MONTHS[monthIdx]}</span>
-              {monthDays.map((cell) => {
-                const style = getDotStyle(cell.count);
-                return (
-                  cell.count < 0 ? (
-                    <div key={cell.day} className="w-[10px] h-[10px]" />
+      <div className="overflow-x-auto pb-1">
+        <div className="inline-flex flex-col gap-0">
+          {/* Month labels */}
+          <div className="flex ml-[28px] mb-1">
+            {monthPositions.map((mp, i) => (
+              <div key={i} className="text-[10px] text-gray-400 dark:text-gray-500 font-medium" style={{ width: `${(grid[0].length) * 13}px`, minWidth: `${mp.week * 13}px`, marginLeft: i === 0 ? 0 : undefined }}>
+                {mp.label}
+              </div>
+            ))}
+          </div>
+
+          {/* Grid */}
+          {grid.map((row, dayIdx) => (
+            <div key={dayIdx} className="flex items-center gap-0">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 w-[24px] text-right pr-2 font-medium">
+                {dayIdx % 2 === 1 ? DAYS[dayIdx] : ''}
+              </span>
+              <div className="flex gap-[3px]">
+                {row.map((cell, weekIdx) => (
+                  cell === null ? (
+                    <div key={weekIdx} className="w-[11px] h-[11px]" />
                   ) : (
                     <motion.div
-                      key={cell.day}
+                      key={weekIdx}
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{
-                        delay: (monthIdx * 31 + cell.day) * 0.001,
+                        delay: (weekIdx * 7 + dayIdx) * 0.002,
                         type: 'spring',
                         stiffness: 500,
-                        damping: 30,
+                        damping: 28,
                       }}
                       onMouseEnter={(e) => {
-                        setHovered({ month: monthIdx, day: cell.day });
+                        setHovered({ week: weekIdx, day: dayIdx });
                         setTipPos({ x: e.clientX, y: e.clientY });
                       }}
                       onMouseMove={(e) => setTipPos({ x: e.clientX, y: e.clientY })}
                       onMouseLeave={() => setHovered(null)}
-                      className={`w-[10px] h-[10px] rounded-full cursor-pointer transition-all duration-150 hover:scale-[1.6] hover:z-10 relative ${style.bg}`}
-                      style={{ boxShadow: style.shadow }}
+                      className={`w-[11px] h-[11px] rounded-[2px] cursor-pointer transition-all duration-150 hover:scale-[1.4] hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 hover:z-10 relative ${getCellColor(cell.count)}`}
                     />
                   )
-                );
-              })}
+                ))}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
       <AnimatePresence>
-        {hoveredData && hoveredData.count >= 0 && (
+        {hoveredCell && (
           <motion.div
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -129,8 +165,10 @@ const PulseCalendar = () => {
             className="fixed z-50 bg-gray-900 dark:bg-gray-800 text-white text-[11px] px-3 py-2 rounded-lg shadow-xl pointer-events-none border border-gray-700/50"
             style={{ left: tipPos.x + 12, top: tipPos.y - 44 }}
           >
-            <span className="font-semibold">{hoveredData.count} reviews</span>
-            <span className="text-gray-400 ml-1.5">{hoveredData.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            <span className="font-semibold">{hoveredCell.count} reviews</span>
+            <span className="text-gray-400 ml-1.5">
+              {hoveredCell.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
