@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Bell, Shield, Palette, Key, Save, Check, Moon, Sun, Monitor, Users, Mail, X, Copy, Trash2, Crown, ExternalLink, Zap, Loader2, AlertCircle } from 'lucide-react';
+import { User, Bell, Shield, Palette, Key, Save, Check, Moon, Sun, Monitor, Users, Mail, X, Copy, Trash2, Crown, ExternalLink, Zap, Loader2, AlertCircle, GitBranch, Ruler, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import api from '../../services/api';
@@ -12,6 +12,9 @@ const tabs = [
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'api', label: 'API Keys', icon: Key },
+  { id: 'integrations', label: 'Integrations', icon: GitBranch },
+  { id: 'rules', label: 'Rules', icon: Ruler },
+  { id: 'personas', label: 'AI Personas', icon: Sparkles },
 ];
 
 interface TeamMember {
@@ -282,6 +285,258 @@ const TeamTab = () => {
   );
 };
 
+const IntegrationsTab = () => {
+  const [configs, setConfigs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ repo_owner: '', repo_name: '', access_token: '', webhook_secret: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get('/integrations/github').then(r => setConfigs(r.data.configs || [])).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const handleAdd = async () => {
+    setSaving(true);
+    try {
+      const res = await api.post('/integrations/github', form);
+      setConfigs([...configs, res.data.config]);
+      setShowAdd(false);
+      setForm({ repo_owner: '', repo_name: '', access_token: '', webhook_secret: '' });
+    } catch {}
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await api.delete(`/integrations/github/${id}`);
+    setConfigs(configs.filter(c => c.id !== id));
+  };
+
+  const handleToggle = async (id: string, field: string, value: boolean) => {
+    await api.patch(`/integrations/github/${id}`, { [field]: value });
+    setConfigs(configs.map(c => c.id === id ? { ...c, [field]: value } : c));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white">GitHub Integrations</h2>
+        <button onClick={() => setShowAdd(!showAdd)} className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-btn transition-all flex items-center gap-1.5">
+          <GitBranch size={13} /> Connect Repository
+        </button>
+      </div>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400">Auto-review pull requests when they're opened on GitHub.</p>
+
+      {showAdd && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-gray-50 dark:bg-dark-surface rounded-card border border-gray-200 dark:border-dark-border space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Repo Owner</label><input value={form.repo_owner} onChange={e => setForm({...form, repo_owner: e.target.value})} className="input" placeholder="Rajeshkumar80" /></div>
+            <div><label className="label">Repo Name</label><input value={form.repo_name} onChange={e => setForm({...form, repo_name: e.target.value})} className="input" placeholder="DevFlow" /></div>
+          </div>
+          <div><label className="label">GitHub Access Token</label><input type="password" value={form.access_token} onChange={e => setForm({...form, access_token: e.target.value})} className="input" placeholder="ghp_xxx" /></div>
+          <div><label className="label">Webhook Secret</label><input value={form.webhook_secret} onChange={e => setForm({...form, webhook_secret: e.target.value})} className="input" placeholder="your-secret" /></div>
+          <p className="text-[10px] text-gray-400">Webhook URL: <code className="bg-gray-200 dark:bg-dark-border px-1 rounded">http://your-server:5000/api/v1/webhooks/github</code></p>
+          <div className="flex gap-2">
+            <button onClick={handleAdd} disabled={saving} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-btn">{saving ? 'Saving...' : 'Save'}</button>
+            <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 bg-gray-200 dark:bg-dark-border text-xs rounded-btn">Cancel</button>
+          </div>
+        </motion.div>
+      )}
+
+      {loading ? <div className="text-xs text-gray-400">Loading...</div> : configs.length === 0 ? (
+        <div className="text-center py-8 text-gray-400 text-xs">No repositories connected yet</div>
+      ) : (
+        <div className="space-y-2">
+          {configs.map(c => (
+            <div key={c.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-surface rounded-card border border-gray-200 dark:border-dark-border">
+              <div className="flex items-center gap-3">
+                <GitBranch size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{c.repo_full_name}</p>
+                  <p className="text-[10px] text-gray-400">Connected {new Date(c.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-[10px] text-gray-400">Auto-review</span>
+                  <input type="checkbox" checked={c.auto_review} onChange={e => handleToggle(c.id, 'auto_review', e.target.checked)} className="sr-only peer" />
+                  <div className="w-8 h-4 bg-gray-300 dark:bg-dark-border rounded-full peer-checked:bg-primary-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-4 relative" />
+                </label>
+                <button onClick={() => handleDelete(c.id)} className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const RulesTab = () => {
+  const [rules, setRules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ name: '', type: 'pattern', pattern: '', severity: 'warning', message: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get('/repos/default/rules').then(r => setRules(r.data.rules || [])).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const handleAdd = async () => {
+    setSaving(true);
+    try {
+      const res = await api.post('/repos/default/rules', form);
+      setRules([...rules, res.data]);
+      setShowAdd(false);
+      setForm({ name: '', type: 'pattern', pattern: '', severity: 'warning', message: '' });
+    } catch {}
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await api.delete(`/rules/${id}`);
+    setRules(rules.filter(r => r.id !== id));
+  };
+
+  const handleToggle = async (id: string, isActive: boolean) => {
+    await api.patch(`/rules/${id}`, { is_active: isActive });
+    setRules(rules.map(r => r.id === id ? { ...r, is_active: isActive } : r));
+  };
+
+  const severityColor = (s: string) => {
+    if (s === 'critical') return 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400';
+    if (s === 'error') return 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400';
+    if (s === 'warning') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400';
+    return 'bg-gray-100 text-gray-600 dark:bg-dark-surface dark:text-gray-400';
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white">Review Rules</h2>
+        <button onClick={() => setShowAdd(!showAdd)} className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-btn transition-all flex items-center gap-1.5">
+          <Ruler size={13} /> Add Rule
+        </button>
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400">Custom rules enforced during AI analysis.</p>
+
+      {showAdd && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-gray-50 dark:bg-dark-surface rounded-card border border-gray-200 dark:border-dark-border space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Rule Name</label><input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="input" placeholder="No console.log" /></div>
+            <div><label className="label">Type</label>
+              <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="input">
+                <option value="pattern">Pattern (regex)</option>
+                <option value="max_lines">Max Lines</option>
+                <option value="forbidden">Forbidden Terms</option>
+                <option value="require">Require</option>
+              </select>
+            </div>
+          </div>
+          {form.type === 'pattern' && <div><label className="label">Regex Pattern</label><input value={form.pattern} onChange={e => setForm({...form, pattern: e.target.value})} className="input font-mono text-xs" placeholder="console\\.log\\(" /></div>}
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Severity</label>
+              <select value={form.severity} onChange={e => setForm({...form, severity: e.target.value})} className="input">
+                <option value="info">Info</option>
+                <option value="warning">Warning</option>
+                <option value="error">Error</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div><label className="label">Message</label><input value={form.message} onChange={e => setForm({...form, message: e.target.value})} className="input" placeholder="Use logger instead" /></div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleAdd} disabled={saving} className="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-btn">{saving ? 'Saving...' : 'Save'}</button>
+            <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 bg-gray-200 dark:bg-dark-border text-xs rounded-btn">Cancel</button>
+          </div>
+        </motion.div>
+      )}
+
+      {loading ? <div className="text-xs text-gray-400">Loading...</div> : rules.length === 0 ? (
+        <div className="text-center py-8 text-gray-400 text-xs">No rules configured. Add rules to enforce coding standards.</div>
+      ) : (
+        <div className="space-y-2">
+          {rules.map(rule => (
+            <div key={rule.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-surface rounded-card border border-gray-200 dark:border-dark-border">
+              <div className="flex items-center gap-3">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${severityColor(rule.severity)}`}>{rule.severity}</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{rule.name}</p>
+                  <p className="text-[10px] text-gray-400 font-mono">{rule.type}{rule.pattern ? `: ${rule.pattern}` : ''}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input type="checkbox" checked={rule.is_active} onChange={e => handleToggle(rule.id, e.target.checked)} className="sr-only peer" />
+                <div className="w-8 h-4 bg-gray-300 dark:bg-dark-border rounded-full peer-checked:bg-primary-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-4 relative" />
+                <button onClick={() => handleDelete(rule.id)} className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PersonasTab = () => {
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState('strict');
+
+  const defaultPersonas = [
+    { name: 'strict', display_name: 'Strict Reviewer', description: 'Extremely critical. Finds every possible issue.', icon: '🔍', tone: 'demanding' },
+    { name: 'security', display_name: 'Security Auditor', description: 'Focuses exclusively on security vulnerabilities.', icon: '🛡️', tone: 'cautious' },
+    { name: 'performance', display_name: 'Performance Expert', description: 'Optimizes for speed and efficiency.', icon: '⚡', tone: 'optimizing' },
+    { name: 'friendly', display_name: 'Friendly Mentor', description: 'Encouraging. Points out issues gently.', icon: '😊', tone: 'supportive' },
+    { name: 'junior', display_name: 'Teaching Reviewer', description: 'Explains everything for learning.', icon: '📚', tone: 'educational' },
+  ];
+
+  useEffect(() => {
+    api.get('/personas').then(r => {
+      const all = r.data.personas || [];
+      const saved = all.find((p: any) => p.selected);
+      if (saved) setSelected(saved.name);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const handleSelect = async (name: string) => {
+    setSelected(name);
+    try { await api.post('/settings', { default_persona: name }); } catch {}
+  };
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-base font-semibold text-gray-900 dark:text-white">AI Review Personas</h2>
+      <p className="text-xs text-gray-500 dark:text-gray-400">Choose how the AI reviewer analyzes your code.</p>
+
+      {loading ? <div className="text-xs text-gray-400">Loading...</div> : (
+        <div className="grid grid-cols-1 gap-3">
+          {defaultPersonas.map(p => (
+            <motion.button
+              key={p.name}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => handleSelect(p.name)}
+              className={`flex items-start gap-3 p-4 rounded-card border text-left transition-all ${selected === p.name ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 dark:border-primary-500 ring-1 ring-primary-500/20' : 'border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover'}`}
+            >
+              <span className="text-2xl mt-0.5">{p.icon}</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.display_name}</p>
+                  {selected === p.name && <span className="text-[10px] px-1.5 py-0.5 bg-primary-600 text-white rounded-full">Active</span>}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{p.description}</p>
+                <p className="text-[10px] text-gray-400 mt-1">Tone: {p.tone}</p>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [saved, setSaved] = useState(false);
@@ -373,6 +628,9 @@ export const SettingsPage = () => {
           )}
 
           {activeTab === 'api' && <ApiKeysTab />}
+          {activeTab === 'integrations' && <IntegrationsTab />}
+          {activeTab === 'rules' && <RulesTab />}
+          {activeTab === 'personas' && <PersonasTab />}
 
           <div className="mt-6 pt-5 border-t border-gray-100 dark:border-dark-border flex items-center gap-3">
             {activeTab !== 'api' && (
