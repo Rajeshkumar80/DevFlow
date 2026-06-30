@@ -4,18 +4,24 @@ import { CodeReview } from '../types';
 
 const ALLOWED_UPDATE_FIELDS = ['title', 'description', 'branchName', 'priority', 'status'];
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+function stripDangerousHtml(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed\b[^>]*\/?>/gi, '')
+    .replace(/<link\b[^>]*\/?>/gi, '')
+    .replace(/<meta\b[^>]*\/?>/gi, '')
+    .replace(/on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"']+)/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '')
+    .trim();
 }
 
 function sanitizeInput(input: string, maxLength: number = 500): string {
   if (!input || typeof input !== 'string') return '';
-  return escapeHtml(input.trim().substring(0, maxLength));
+  return stripDangerousHtml(input.trim().substring(0, maxLength));
 }
 
 export class ReviewService {

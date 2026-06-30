@@ -1,13 +1,19 @@
 import { prisma } from '../db/prisma';
 import { v4 as uuidv4 } from 'uuid';
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+function stripDangerousHtml(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed\b[^>]*\/?>/gi, '')
+    .replace(/<link\b[^>]*\/?>/gi, '')
+    .replace(/<meta\b[^>]*\/?>/gi, '')
+    .replace(/on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"']+)/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '')
+    .trim();
 }
 
 export class CommentService {
@@ -26,9 +32,9 @@ export class CommentService {
     if (!content || typeof content !== 'string' || content.length > 5000) {
       throw new Error('Comment content is required and must be under 5000 characters');
     }
-    const safeContent = escapeHtml(content.trim());
-    const safeSuggestion = suggestionText ? escapeHtml(suggestionText.trim().substring(0, 2000)) : null;
-    const safeFilePath = filePath ? escapeHtml(filePath.substring(0, 500)) : null;
+    const safeContent = stripDangerousHtml(content.trim());
+    const safeSuggestion = suggestionText ? stripDangerousHtml(suggestionText.trim().substring(0, 2000)) : null;
+    const safeFilePath = filePath ? stripDangerousHtml(filePath.substring(0, 500)) : null;
 
     return prisma.comment.create({
       data: {

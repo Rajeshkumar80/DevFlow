@@ -2,15 +2,6 @@ import { Router, Request, Response } from 'express';
 import { CommentService } from '../services/CommentService';
 import { authMiddleware } from '../middleware/auth';
 
-function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
-}
-
 export function createCommentRouter(db?: any) {
   const router = Router();
   const commentService = new CommentService(db);
@@ -23,16 +14,14 @@ export function createCommentRouter(db?: any) {
         return res.status(400).json({ error: 'Comment content is required' });
       }
 
-      const sanitizedContent = escapeHtml(content);
-
       const comment = await commentService.addComment(
         req.params.reviewId,
         req.userId!,
         filePath || '',
         lineNumber || 0,
-        sanitizedContent,
+        content,
         isSuggestion || false,
-        suggestionText ? escapeHtml(suggestionText) : undefined,
+        suggestionText,
         threadId
       );
       res.status(201).json(comment);
