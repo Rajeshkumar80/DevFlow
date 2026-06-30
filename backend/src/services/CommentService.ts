@@ -1,6 +1,15 @@
 import { prisma } from '../db/prisma';
 import { v4 as uuidv4 } from 'uuid';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export class CommentService {
   constructor(_db?: any) {}
 
@@ -14,16 +23,23 @@ export class CommentService {
     suggestionText?: string,
     threadId?: string
   ): Promise<any> {
+    if (!content || typeof content !== 'string' || content.length > 5000) {
+      throw new Error('Comment content is required and must be under 5000 characters');
+    }
+    const safeContent = escapeHtml(content.trim());
+    const safeSuggestion = suggestionText ? escapeHtml(suggestionText.trim().substring(0, 2000)) : null;
+    const safeFilePath = filePath ? escapeHtml(filePath.substring(0, 500)) : null;
+
     return prisma.comment.create({
       data: {
         id: uuidv4(),
         review_id: reviewId,
         author_id: authorId,
-        file_path: filePath || null,
+        file_path: safeFilePath,
         line_number: lineNumber || null,
-        content,
+        content: safeContent,
         is_suggestion: isSuggestion,
-        suggestion_text: suggestionText || null,
+        suggestion_text: safeSuggestion,
         thread_id: threadId || null,
         resolved: false,
       },

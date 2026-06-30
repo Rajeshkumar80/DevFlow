@@ -22,6 +22,18 @@ export class AuthService {
     password: string,
     fullName?: string
   ): Promise<any> {
+    if (!email || typeof email !== 'string' || email.length > 254) {
+      throw new Error('Invalid email format');
+    }
+    if (!username || typeof username !== 'string' || username.length < 3 || username.length > 30) {
+      throw new Error('Username must be 3-30 characters');
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      throw new Error('Username can only contain letters, numbers, and underscores');
+    }
+    if (!password || typeof password !== 'string' || password.length > 128) {
+      throw new Error('Invalid password');
+    }
     if (!this.isValidEmail(email)) {
       throw new Error('Invalid email format');
     }

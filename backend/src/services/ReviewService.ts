@@ -4,6 +4,20 @@ import { CodeReview } from '../types';
 
 const ALLOWED_UPDATE_FIELDS = ['title', 'description', 'branchName', 'priority', 'status'];
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+function sanitizeInput(input: string, maxLength: number = 500): string {
+  if (!input || typeof input !== 'string') return '';
+  return escapeHtml(input.trim().substring(0, maxLength));
+}
+
 export class ReviewService {
   async createReview(
     repoId: string,
@@ -14,6 +28,13 @@ export class ReviewService {
     baseBranch = 'main',
     codeFiles?: { name: string; content: string }[]
   ): Promise<any> {
+    const safeTitle = sanitizeInput(title, 200);
+    const safeDescription = sanitizeInput(description || '', 2000);
+    const safeBranch = sanitizeInput(branchName, 100);
+    const safeBase = sanitizeInput(baseBranch, 100);
+
+    if (!safeTitle) throw new Error('Title is required');
+
     const filesChanged = codeFiles ? codeFiles.length : 0;
     const additions = codeFiles
       ? codeFiles.reduce((sum, f) => sum + f.content.split('\n').length, 0)
@@ -29,11 +50,11 @@ export class ReviewService {
       data: {
         id: uuidv4(),
         repo_id: repoId,
-        title,
-        description: description || '',
+        title: safeTitle,
+        description: safeDescription,
         author_id: authorId,
-        branch_name: branchName,
-        base_branch: baseBranch,
+        branch_name: safeBranch,
+        base_branch: safeBase,
         status: 'open',
         files_changed: filesChanged,
         additions,
@@ -43,8 +64,8 @@ export class ReviewService {
           ? {
               create: codeFiles.map((f) => ({
                 id: uuidv4(),
-                name: f.name,
-                content: f.content,
+                name: sanitizeInput(f.name, 200),
+                content: f.content.substring(0, 100000),
               })),
             }
           : undefined,
