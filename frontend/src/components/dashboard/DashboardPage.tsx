@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileCode, GitPullRequest, Users, TrendingUp, ArrowUp, Plus, X, Code2, Send, GitBranch } from 'lucide-react';
+import { FileCode, GitPullRequest, Users, TrendingUp, Plus, X, Code2, Send, GitBranch } from 'lucide-react';
 import { reviewApi } from '../../services/reviewApi';
+import api from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 export const DashboardPage = () => {
@@ -9,6 +10,8 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [teamData, setTeamData] = useState<any>(null);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -21,12 +24,21 @@ export const DashboardPage = () => {
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    try { const data = await reviewApi.listReviews('repo-1'); setReviews(Array.isArray(data) ? data : []); } catch {} finally { setLoading(false); }
+    try {
+      const [reviewsData] = await Promise.all([
+        reviewApi.listReviews('repo-1').catch(() => []),
+        api.get('/notifications').then(r => setNotifications(r.data.notifications || [])).catch(() => {}),
+        api.get('/analytics/team/team-1').then(r => setTeamData(r.data)).catch(() => {}),
+      ]);
+      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+    } catch {} finally { setLoading(false); }
   };
 
   const openReviews = reviews.filter(r => r.status === 'open').length;
   const approved = reviews.filter(r => r.status === 'approved' || r.status === 'merged').length;
   const avgScore = reviews.length ? (reviews.reduce((a: number, r: any) => a + (r.ai_score || 0), 0) / reviews.length).toFixed(1) : '—';
+  const totalContributors = teamData?.timeSeries?.[0]?.members_active || 6;
+  const recentNotifications = notifications.slice(0, 3);
 
   const addFile = () => setForm({ ...form, files: [...form.files, { name: '', content: '' }] });
   const removeFile = (i: number) => setForm({ ...form, files: form.files.filter((_, idx) => idx !== i) });
@@ -67,15 +79,14 @@ export const DashboardPage = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: FileCode, label: 'Open Reviews', value: openReviews, change: '+12%', color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-500/10' },
-          { icon: GitPullRequest, label: 'Approved', value: approved, change: '+8%', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-          { icon: Users, label: 'Contributors', value: '6', change: '+2', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
-          { icon: TrendingUp, label: 'Avg AI Score', value: avgScore, change: '+0.3', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+          { icon: FileCode, label: 'Open Reviews', value: openReviews, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-500/10' },
+          { icon: GitPullRequest, label: 'Approved', value: approved, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+          { icon: Users, label: 'Active Members', value: totalContributors, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
+          { icon: TrendingUp, label: 'Avg AI Score', value: avgScore, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
         ].map((stat, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-4 shadow-card">
             <div className="flex items-center justify-between mb-3">
               <div className={`p-2 rounded-lg ${stat.bg} ${stat.color}`}><stat.icon size={18} /></div>
-              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-0.5"><ArrowUp size={12} />{stat.change}</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</p>
@@ -147,6 +158,26 @@ export const DashboardPage = () => {
           </table>
         </div>
       </motion.div>
+
+      {/* Notifications */}
+      {recentNotifications.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card">
+          <div className="p-5 pb-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Recent Notifications</h3>
+          </div>
+          <div className="px-5 pb-4 space-y-2">
+            {recentNotifications.map((n: any) => (
+              <div key={n.id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-dark-surface rounded-lg">
+                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${n.is_read ? 'bg-gray-300' : 'bg-primary-500'}`} />
+                <div>
+                  <p className="text-xs font-medium text-gray-900 dark:text-white">{n.title}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{n.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
