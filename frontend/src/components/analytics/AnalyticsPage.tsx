@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, AlertTriangle, Bug, Shield, Zap, Clock, FileCode, ChevronDown, ChevronRight, Layers, Target, GitCommit, RefreshCw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { BarChart3, AlertTriangle, Bug, Shield, Zap, Clock, FileCode, ChevronDown, ChevronRight, Layers, Target, GitCommit, RefreshCw } from 'lucide-react';
 import { analysisApi } from '../../services/analysisApi';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -381,12 +381,15 @@ export const AnalyticsPage = () => {
   const lowCount = issues.filter(i => i.severity === 'low').length;
   const totalIssues = criticalCount + highCount + mediumCount + lowCount || 1;
 
-  const trendScores = [4.2, 4.5, 3.8, 4.7, 4.1, 3.9, 4.4];
-  const trendLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const trendMax = 180;
+  const trendScores = (analytics?.timeSeries || []).slice(-7).map((d: any) => d.avg_ai_score || 0);
+  const trendLabels = (analytics?.timeSeries || []).slice(-7).map((d: any) => {
+    const date = new Date(d.date);
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
+  });
+  const trendMax = 5;
 
-  const velocityData = [12, 18, 8, 22, 15, 10, 20, 14, 25, 16, 12, 28];
-  const velocityMax = 30;
+  const velocityData = (analytics?.timeSeries || []).slice(-12).map((d: any) => d.total_reviews || 0);
+  const velocityMax = Math.max(...velocityData, 1);
 
   return (
     <div className="space-y-6">
@@ -416,17 +419,14 @@ export const AnalyticsPage = () => {
             {/* Top Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { icon: FileCode, label: 'Total Reviews', value: analytics?.total_reviews || 127, change: '+12%', up: true, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-500/10' },
-                { icon: GitCommit, label: 'Commits Analyzed', value: '1.2k', change: '+18%', up: true, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
-                { icon: AlertTriangle, label: 'Issues Found', value: issues.length || 10, change: '-5%', up: false, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
-                { icon: Clock, label: 'Avg Review Time', value: `${analytics?.avg_review_time_hours || 7.7}h`, change: '-1.2h', up: false, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+                { icon: FileCode, label: 'Total Reviews', value: analytics?.total_reviews || issues.length || 0, color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50 dark:bg-primary-500/10' },
+                { icon: GitCommit, label: 'Commits Analyzed', value: analytics?.total_reviews || 0, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
+                { icon: AlertTriangle, label: 'Issues Found', value: issues.length || 0, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+                { icon: Clock, label: 'Avg Review Time', value: `${(analytics?.avg_review_time_hours || 0).toFixed(1)}h`, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
               ].map((stat, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-4 shadow-card">
                   <div className="flex items-center justify-between mb-3">
                     <div className={`p-2 rounded-lg ${stat.bg} ${stat.color}`}><stat.icon size={18} /></div>
-                    <span className={`text-xs font-medium flex items-center gap-0.5 ${stat.up ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                      {stat.up ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{stat.change}
-                    </span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</p>
@@ -438,10 +438,10 @@ export const AnalyticsPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border p-5 shadow-card flex flex-col items-center justify-center">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Overall AI Score</p>
-                <ScoreRing score={analytics?.avg_ai_score || 4.1} />
+                <ScoreRing score={analytics?.avg_ai_score || 0} />
                 <div className="flex gap-6 mt-4 text-center">
-                  <div><p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{analytics?.total_reviews || 127}</p><p className="text-[10px] text-gray-400">Reviews</p></div>
-                  <div><p className="text-lg font-bold text-primary-600 dark:text-primary-400">{analytics?.total_comments || 489}</p><p className="text-[10px] text-gray-400">Comments</p></div>
+                  <div><p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{analytics?.total_reviews || 0}</p><p className="text-[10px] text-gray-400">Reviews</p></div>
+                  <div><p className="text-lg font-bold text-primary-600 dark:text-primary-400">{analytics?.total_comments || 0}</p><p className="text-[10px] text-gray-400">Comments</p></div>
                 </div>
               </motion.div>
 
@@ -471,7 +471,7 @@ export const AnalyticsPage = () => {
                 </div>
               </div>
               <div className="flex items-end justify-between" style={{ height: trendMax }}>
-                {trendScores.map((score, i) => {
+                {trendScores.map((score: number, i: number) => {
                   const bg = score >= 4 ? 'rgb(16,185,129)' : score >= 3 ? 'rgb(245,158,11)' : 'rgb(239,68,68)';
                   return (
                     <TooltipBar
@@ -487,7 +487,7 @@ export const AnalyticsPage = () => {
                 })}
               </div>
               <div className="flex justify-between mt-2">
-                {trendLabels.map((l, i) => (
+                {trendLabels.map((l: string, i: number) => (
                   <span key={i} className="text-[10px] text-gray-400 dark:text-gray-500 font-medium" style={{ flex: 1, textAlign: 'center' }}>{l}</span>
                 ))}
               </div>
@@ -569,12 +569,12 @@ export const AnalyticsPage = () => {
               <div className="bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">Top Contributors</p>
                 <div className="space-y-3">
-                  {[
+                  {(analytics?.contributors || [
                     { name: 'Demo User', reviews: 45, pct: 90 },
                     { name: 'John Dev', reviews: 32, pct: 64 },
                     { name: 'Sarah Chen', reviews: 28, pct: 56 },
                     { name: 'Mike Rod', reviews: 22, pct: 44 },
-                  ].map((member, i) => (
+                  ]).slice(0, 4).map((member: any, i: number) => (
                     <ContributorBar key={i} member={member} index={i} />
                   ))}
                 </div>
@@ -584,7 +584,7 @@ export const AnalyticsPage = () => {
               <div className="lg:col-span-2 bg-white dark:bg-dark-card rounded-card border border-gray-200 dark:border-dark-border shadow-card p-5">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4">Review Velocity (12 Weeks)</p>
                 <div className="flex items-end gap-2 h-28">
-                  {velocityData.map((val, i) => (
+                  {velocityData.map((val: number, i: number) => (
                     <TooltipBar
                       key={i}
                       value={val}
@@ -597,7 +597,7 @@ export const AnalyticsPage = () => {
                   ))}
                 </div>
                 <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-                  {velocityData.map((_, i) => <span key={i} style={{ flex: 1, textAlign: 'center' }}>W{i + 1}</span>)}
+                  {velocityData.map((_: number, i: number) => <span key={i} style={{ flex: 1, textAlign: 'center' }}>W{i + 1}</span>)}
                 </div>
               </div>
             </div>
