@@ -54,7 +54,7 @@ export function createReviewRouter(db: any) {
   router.patch('/:repoId/:reviewId/status', authMiddleware(db), async (req: Request, res: Response) => {
     try {
       const { status } = req.body;
-      const validStatuses = ['draft', 'open', 'approved', 'changes_requested', 'merged'];
+      const validStatuses = ['draft', 'open', 'in_progress', 'approved', 'changes_requested', 'merged'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: 'Invalid status' });
       }

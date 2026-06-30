@@ -70,7 +70,10 @@ export class AuthService {
     const user = await prisma.user.findFirst({
       where: { email, is_active: true },
     });
-    if (!user) throw new Error('Invalid credentials');
+    if (!user) {
+      await bcrypt.compare(password, '$2a$10$dummyhashfortimingattackprevention');
+      throw new Error('Invalid credentials');
+    }
 
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) throw new Error('Invalid credentials');
