@@ -237,7 +237,7 @@ DevFlow/
 
 ## Security
 
-All 12 vulnerabilities identified and fixed:
+All 17 vulnerabilities identified and fixed:
 
 | # | Vulnerability | Fix |
 |---|---|---|
@@ -248,9 +248,14 @@ All 12 vulnerabilities identified and fixed:
 | 7 | Wildcard CORS | Strict origin validation |
 | 8 | Tokens in localStorage | httpOnly cookies with `sameSite: strict` |
 | 9 | Password hash in register response | Stripped via Prisma select |
-| 10 | No HTML sanitization | `escapeHtml()` on comments |
+| 10 | No HTML sanitization | `escapeHtml()` on comments, reviews, rules |
 | 11 | 10mb JSON body limit | Reduced to 2mb |
 | 12 | Weak password requirements | Requires 8+ chars, uppercase, lowercase, number |
+| 13 | No input length validation | Username 3-30 chars, email 254 max, password 128 max |
+| 14 | XSS in review titles | HTML entity escaping on all user input |
+| 15 | Timing attack on login | Constant-time comparison with 300ms minimum |
+| 16 | No review status validation | Whitelist of valid statuses enforced |
+| 17 | Username allows special chars | Alphanumeric + underscore only |
 
 ## Database Schema (20 models)
 
