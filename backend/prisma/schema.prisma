@@ -72,6 +72,12 @@ model Review {
   codeFiles  CodeFile[]
   fixSuggestions FixSuggestion[]
   costEvents    CostEvent[]
+
+  @@index([repo_id])
+  @@index([status])
+  @@index([author_id])
+  @@index([created_at])
+  @@index([repo_id, status])
 }
 
 model CodeFile {
@@ -98,6 +104,10 @@ model Issue {
 
   review Review @relation(fields: [review_id], references: [id], onDelete: Cascade)
   fixSuggestions FixSuggestion[]
+
+  @@index([review_id])
+  @@index([severity])
+  @@index([status])
 }
 
 model Comment {
@@ -116,6 +126,10 @@ model Comment {
 
   review Review @relation(fields: [review_id], references: [id], onDelete: Cascade)
   author User   @relation(fields: [author_id], references: [id])
+
+  @@index([review_id])
+  @@index([author_id])
+  @@index([resolved])
 }
 
 model Notification {
@@ -129,6 +143,10 @@ model Notification {
   created_at DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([user_id, is_read])
+  @@index([created_at])
 }
 
 model Session {
@@ -142,6 +160,9 @@ model Session {
 
   creator      User              @relation(fields: [creator_id], references: [id])
   participants SessionParticipant[]
+
+  @@index([creator_id])
+  @@index([status])
 }
 
 model SessionParticipant {
@@ -186,6 +207,9 @@ model GithubConfig {
 
   user        User          @relation(fields: [user_id], references: [id])
   webhookLogs WebhookLog[]
+
+  @@index([user_id])
+  @@index([repo_full_name])
 }
 
 model WebhookLog {
@@ -249,6 +273,10 @@ model CostEvent {
 
   user   User    @relation(fields: [user_id], references: [id])
   review Review? @relation(fields: [review_id], references: [id])
+
+  @@index([user_id])
+  @@index([created_at])
+  @@index([model])
 }
 
 model QualitySnapshot {
@@ -264,6 +292,9 @@ model QualitySnapshot {
   issue_count       Int      @default(0)
   resolved_count    Int      @default(0)
   created_at        DateTime @default(now())
+
+  @@index([team_id])
+  @@index([team_id, period_start])
 }
 
 model FileDependency {
