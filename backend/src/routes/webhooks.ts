@@ -39,25 +39,51 @@ router.post('/github', async (req: Request, res: Response) => {
       const review = await prisma.review.create({
         data: {
           id: `review-gh-${Date.now()}`,
-          repo_id: 'default',
+          repo_id: config.repo_full_name,
           title: `PR #${pr.number}: ${pr.title}`,
           description: pr.body || '',
           author_id: config.user_id,
-          status: 'analyzing',
+          status: 'open',
           branch_name: pr.head?.ref || 'unknown',
           base_branch: pr.base?.ref || 'main',
         }
       });
 
       try {
-        const diff = `PR #${pr.number} diff from ${pr.head?.ref || 'unknown'} to ${pr.base?.ref || 'main'}`;
+        let codeToAnalyze = '';
+        let language = 'javascript';
+
+        try {
+          const diffResponse = await fetch(`https://api.github.com/repos/${config.repo_owner}/${config.repo_name}/pulls/${pr.number}/files`, {
+            headers: {
+              'Authorization': `token ${config.access_token}`,
+              'Accept': 'application/vnd.github.v3+json',
+            },
+          });
+          if (diffResponse.ok) {
+            const files = await diffResponse.json() as any[];
+            codeToAnalyze = files.map((f: any) => `// File: ${f.filename}\n${f.patch || ''}`).join('\n\n');
+            const ext = files[0]?.filename?.split('.').pop();
+            if (ext === 'py') language = 'python';
+            else if (ext === 'go') language = 'go';
+            else if (ext === 'rs') language = 'rust';
+            else if (ext === 'java') language = 'java';
+          }
+        } catch {
+          codeToAnalyze = `PR #${pr.number} from ${pr.head?.ref || 'unknown'} to ${pr.base?.ref || 'main'}`;
+        }
+
+        if (!codeToAnalyze) {
+          codeToAnalyze = `PR #${pr.number} from ${pr.head?.ref || 'unknown'} to ${pr.base?.ref || 'main'}`;
+        }
+
         const { CodeAnalysisService } = await import('../services/CodeAnalysisService');
-        const result = await CodeAnalysisService.analyzeCode(diff, 'diff', undefined, review.id);
+        const result = await CodeAnalysisService.analyzeCode(codeToAnalyze, language, undefined, review.id);
         const comment = GitHubService.formatReviewComment(review, result.issues, result.overallScore);
         await GitHubService.postPRComment(config.repo_owner, config.repo_name, pr.number, comment, config.access_token);
-        await prisma.review.update({ where: { id: review.id }, data: { status: 'completed', ai_score: result.overallScore } });
+        await prisma.review.update({ where: { id: review.id }, data: { status: 'merged', ai_score: result.overallScore } });
       } catch (err: any) {
-        await prisma.review.update({ where: { id: review.id }, data: { status: 'failed' } });
+        await prisma.review.update({ where: { id: review.id }, data: { status: 'changes_requested' } });
       }
     }
 
