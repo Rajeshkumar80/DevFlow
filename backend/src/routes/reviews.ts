@@ -84,6 +84,10 @@ export function createReviewRouter(db: any) {
 
   router.delete('/:repoId/:reviewId', authMiddleware(db), async (req: Request, res: Response) => {
     try {
+      const review = await reviewService.getReview(req.params.reviewId);
+      if (!review) {
+        return res.status(404).json({ error: 'Review not found' });
+      }
       await reviewService.deleteReview(req.params.reviewId, req.userId!);
       res.status(204).send();
     } catch (err: any) {
