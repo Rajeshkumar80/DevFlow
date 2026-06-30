@@ -4,6 +4,7 @@ import { prisma } from '../db/prisma';
 import { User, JWTPayload, LoginResponse } from '../types';
 
 const blacklistedTokens = new Set<string>();
+const DUMMY_HASH = bcrypt.hashSync('dummy_password_for_timing', 10);
 
 export class AuthService {
   constructor(_db?: any) {}
@@ -67,18 +68,28 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
+    const MIN_LOGIN_TIME_MS = 300;
+    const startTime = Date.now();
+
     const user = await prisma.user.findFirst({
       where: { email, is_active: true },
     });
 
-    if (!user) {
-      const dummyHash = '$2a$10$' + 'a'.repeat(53);
-      await bcrypt.compare(password, dummyHash);
-      throw new Error('Invalid credentials');
+    let passwordMatch = false;
+    if (user) {
+      passwordMatch = await bcrypt.compare(password, user.password_hash);
+    } else {
+      await bcrypt.compare(password, DUMMY_HASH);
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
-    if (!passwordMatch) throw new Error('Invalid credentials');
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MIN_LOGIN_TIME_MS) {
+      await new Promise(resolve => setTimeout(resolve, MIN_LOGIN_TIME_MS - elapsed));
+    }
+
+    if (!user || !passwordMatch) {
+      throw new Error('Invalid credentials');
+    }
 
     await prisma.user.update({
       where: { id: user.id },
