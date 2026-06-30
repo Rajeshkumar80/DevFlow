@@ -2,6 +2,19 @@ import { prisma } from '../db/prisma';
 import { OpenRouterService } from './OpenRouterService';
 import { v4 as uuid } from 'uuid';
 
+function calculateCostCents(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing: Record<string, { input: number; output: number }> = {
+    'openai/gpt-4o-mini': { input: 0.15, output: 0.60 },
+    'openai/gpt-4o': { input: 2.50, output: 10.00 },
+    'anthropic/claude-3-haiku': { input: 0.25, output: 1.25 },
+    'anthropic/claude-3-sonnet': { input: 3.00, output: 15.00 },
+    'google/gemini-2.0-flash': { input: 0.10, output: 0.40 },
+    'google/gemini-2.0-flash-001': { input: 0.10, output: 0.40 },
+  };
+  const p = pricing[model] || { input: 1.0, output: 3.0 };
+  return Math.round((inputTokens / 1_000_000) * p.input * 100 + (outputTokens / 1_000_000) * p.output * 100);
+}
+
 export class CodeAnalysisService {
   static async analyzeCode(
     code: string,
@@ -10,8 +23,18 @@ export class CodeAnalysisService {
     reviewId: string
   ) {
     let result;
+    let usedAI = false;
+    let model = '';
+    let inputTokens = 0;
+    let outputTokens = 0;
+    const startTime = Date.now();
+
     try {
       result = await OpenRouterService.analyzeCode(code, language, filePath);
+      usedAI = true;
+      model = await OpenRouterService.getModel();
+      inputTokens = Math.ceil(code.length / 4);
+      outputTokens = Math.ceil(JSON.stringify(result).length / 4);
     } catch (aiError: any) {
       result = this.fallbackAnalysis(code, language, filePath);
       result.summary = `[Fallback Analysis] ${aiError.message}. Using pattern-based analysis.`;
@@ -40,6 +63,25 @@ export class CodeAnalysisService {
       where: { id: reviewId },
       data: { ai_score: result.overallScore },
     });
+
+    if (usedAI && model) {
+      try {
+        const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { author_id: true } });
+        await prisma.costEvent.create({
+          data: {
+            id: `cost-${uuid()}`,
+            user_id: review?.author_id || 'system',
+            review_id: reviewId,
+            model,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+            cost_cents: calculateCostCents(model, inputTokens, outputTokens),
+            duration_ms: Date.now() - startTime,
+            status: 'success',
+          },
+        });
+      } catch {}
+    }
 
     return { issues, overallScore: result.overallScore, summary: result.summary };
   }
